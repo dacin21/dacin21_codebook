@@ -1,8 +1,8 @@
 //really fast iterative segment-tree implementation
-//uses std::function for subtree-merges and leaf-updates
 #include <bits/stdc++.h>
 using namespace std;
 
+//uses std::function for subtree-merges and leaf-updates
 template<typename T>
 struct segTree{
     vector<T> data;
@@ -31,3 +31,42 @@ struct segTree{
         return combine(retL, retR);
     }
 };
+
+// nicer implementation with struct
+template<class Segtree_Data>
+struct Segment_Tree{
+	using T = Segtree_Data::node_t;
+	int n;
+	vector<T>data;
+	Segment_Tree(int _n):n(_n), data(2*n, Segment_Tree::node_ne()){
+		for(int i=n-1;i>=0;--i) data[i] = Segtree_Data::merge_nodes(data[i<<1], data[i<<1|1]);
+	}
+	Segment_Tree(vector<T> const&base):n(base.size()), data(2*n, Segment_Tree::node_ne()){
+		copy(base.begin(), base.end(), data.begin()+n);
+		for(int i=n-1;i>=0;--i) data[i] = Segtree_Data::merge_nodes(data[i<<1], data[i<<1|1]);
+	}
+	void update(int pos, T const&val){
+		for(Segtree_Data::update_node(data[pos+=n]);pos>>=1;){
+			data[pos] = Segtree_Data::merge_nodes(data[pos<<1], data[pos<<1|1]);
+		}
+	}
+	T query(int l, int r)const{
+		T retL = Segtree_Data::node_ne(), retR = Segment_Tree::node_ne();
+		for(l+=n, r+=n;l<r;l>>=1, r>>=1){
+			if(l&1) retL = Segtree_Data::merge_nodes(retL, data[l++]);
+			if(r&1) retR = Segtree_Data::merge_nodes(data[--r], retR);
+		}
+		return Segment_Tree::merge_nodes(retL, retR);
+	}
+};
+struct Segtreedata{
+    typedef int node_t;
+    typedef int update_t;
+    static constexpr node_t node_ne() {return numeric_limits<int>::min();}
+    static node_t merge_nodes(node_t const&left, node_t const&right){
+        return node_t(max(left,right));
+    }
+    static void update_node(node_t &node, update_t const&update){
+        if(node == node_ne() || update<node) node = update;
+    }
+}

@@ -35,13 +35,13 @@ struct segTree{
 // nicer implementation with struct
 template<class Segtree_Data>
 struct Segment_Tree{
-	using T = Segtree_Data::node_t;
+	using T = typename Segtree_Data::node_t;
 	int n;
 	vector<T>data;
-	Segment_Tree(int _n):n(_n), data(2*n, Segment_Tree::node_ne()){
+	Segment_Tree(int _n):n(_n), data(2*n, Segtree_Data::node_ne()){
 		for(int i=n-1;i>=0;--i) data[i] = Segtree_Data::merge_nodes(data[i<<1], data[i<<1|1]);
 	}
-	Segment_Tree(vector<T> const&base):n(base.size()), data(2*n, Segment_Tree::node_ne()){
+	Segment_Tree(vector<T> const&base):n(base.size()), data(2*n, Segtreedata::node_ne()){
 		copy(base.begin(), base.end(), data.begin()+n);
 		for(int i=n-1;i>=0;--i) data[i] = Segtree_Data::merge_nodes(data[i<<1], data[i<<1|1]);
 	}
@@ -51,12 +51,12 @@ struct Segment_Tree{
 		}
 	}
 	T query(int l, int r)const{
-		T retL = Segtree_Data::node_ne(), retR = Segment_Tree::node_ne();
+		T retL = Segtree_Data::node_ne(), retR = Segtreedata::node_ne();
 		for(l+=n, r+=n;l<r;l>>=1, r>>=1){
 			if(l&1) retL = Segtree_Data::merge_nodes(retL, data[l++]);
 			if(r&1) retR = Segtree_Data::merge_nodes(data[--r], retR);
 		}
-		return Segment_Tree::merge_nodes(retL, retR);
+		return Segtreedata::merge_nodes(retL, retR);
 	}
 };
 struct Segtreedata{
@@ -69,4 +69,4 @@ struct Segtreedata{
     static void update_node(node_t &node, update_t const&update){
         if(node == node_ne() || update<node) node = update;
     }
-}
+};

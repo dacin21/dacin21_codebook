@@ -41,22 +41,22 @@ struct Segment_Tree{
 	Segment_Tree(int _n):n(_n), data(2*n, Segtree_Data::node_ne()){
 		for(int i=n-1;i>=0;--i) data[i] = Segtree_Data::merge_nodes(data[i<<1], data[i<<1|1]);
 	}
-	Segment_Tree(vector<T> const&base):n(base.size()), data(2*n, Segtreedata::node_ne()){
+	Segment_Tree(vector<T> const&base):n(base.size()), data(2*n, Segtree_Data::node_ne()){
 		copy(base.begin(), base.end(), data.begin()+n);
 		for(int i=n-1;i>=0;--i) data[i] = Segtree_Data::merge_nodes(data[i<<1], data[i<<1|1]);
 	}
 	void update(int pos, T const&val){
-		for(Segtree_Data::update_node(data[pos+=n]);pos>>=1;){
+		for(Segtree_Data::update_node(data[pos+=n], val);pos>>=1;){
 			data[pos] = Segtree_Data::merge_nodes(data[pos<<1], data[pos<<1|1]);
 		}
 	}
 	T query(int l, int r)const{
-		T retL = Segtree_Data::node_ne(), retR = Segtreedata::node_ne();
+		T retL = Segtree_Data::node_ne(), retR = Segtree_Data::node_ne();
 		for(l+=n, r+=n;l<r;l>>=1, r>>=1){
 			if(l&1) retL = Segtree_Data::merge_nodes(retL, data[l++]);
 			if(r&1) retR = Segtree_Data::merge_nodes(data[--r], retR);
 		}
-		return Segtreedata::merge_nodes(retL, retR);
+		return Segtree_Data::merge_nodes(retL, retR);
 	}
 };
 struct Segtreedata{

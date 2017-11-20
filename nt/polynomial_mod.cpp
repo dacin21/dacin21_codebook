@@ -103,7 +103,7 @@ struct NT{
     static int mul(int const&a, int const&b){
         return a*(ll)b%mod;
     }
-    static int& xmul(int const&a, int const&b){
+    static int& xmul(int &a, int const&b){
         return a=mul(a, b);
     }
     // this is soooo great!

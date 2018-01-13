@@ -82,8 +82,8 @@ private:
             op(pos[hp[v]], pos[v]+1);
         }
         if(d[u]>d[v]) swap(u, v);
-        op(pos[u]+1, pos[v]+1); // node aggregate
-        //op(pos[u], pos[v]+1); // edge aggregate
+        op(pos[u], pos[v]+1); // node aggregate
+        //op(pos[u]+1, pos[v]+1); // edge aggregate
     }
 public:
     HeavyLight(vector<vector<int> > const&G):n(G.size()), g(G), p(n, -1), hp(n, -1), d(n, 0), heavy(n, -1), pos(n, -1), st(n){init();}
@@ -95,6 +95,13 @@ public:
         typename Segtree_Data::node_t ans = Segtree_Data::node_ne();
         path(u, v, [this, &ans](int l, int r){ans = Segtree_Data::merge_nodes(ans, st.query(l, r));});
         return ans;
+    }
+    int lca(int u, int v){
+        for(;hp[u]!=hp[v];v=p[hp[v]]){
+            if(d[hp[u]]>d[hp[v]]) swap(u, v);
+        }
+        if(d[u]>d[v]) swap(u, v);
+        return u;
     }
 };
 struct Segtreedata{

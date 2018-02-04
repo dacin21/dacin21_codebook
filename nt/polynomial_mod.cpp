@@ -106,15 +106,21 @@ struct NT{
     static int& xmul(int &a, int const&b){
         return a=mul(a, b);
     }
-    // this is soooo great!
     static int inv_rec(int const&a, int const&m){
         assert(a!=0);
         if(a==1) return 1;
         int ret = m+(1-inv_rec(m%a, a)*(ll)m)/a;
         return ret;
     }
+	// this is soooo great, can even be used for a sieve
+    static int inv_rec_2(int const&a, int const&m){
+        assert(a!=0);
+        if(a==1) return 1;
+        int ret = m-NT<mod>::mul((m/a), inv_rec_2(m%a, m));
+        return ret;
+    }
     static int inv(int const&a){
-        return inv_rec(a, mod);
+        return inv_rec_2(a, mod);
     }
 };
 

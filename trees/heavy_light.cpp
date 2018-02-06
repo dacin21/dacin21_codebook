@@ -1,5 +1,7 @@
+// Heavy light decomposition
+// Tree path updates and queries in O(log(n)^2)
 template<class Segtree_Data>
-class HeavyLight{
+class Heavy_Light{
 private:
     struct Segtree{
         int N, height;
@@ -10,7 +12,7 @@ private:
             for(int i=N-1;i>=0;--i)
                 data[i]=Segtree_Data::merge_nodes(data[i<<1], data[i<<1|1]);
         }
-        Segtree(int n):N(n), height(__builtin_clz(1)-__builtin_clz(N)), data(2*N, Segtree_Data::node_ne()), lazy(2*N, Segtree_Data::update_ne()){
+        Segtree(int n):N(n), height(__builtin_clz(1)-__builtin_clz(N)), data(2*N, Segtree_Data::node_init()), lazy(2*N, Segtree_Data::update_ne()){
             for(int i=N-1;i>=0;--i)
                 data[i]=Segtree_Data::merge_nodes(data[i<<1], data[i<<1|1]);
         }
@@ -86,7 +88,13 @@ private:
         //op(pos[u]+1, pos[v]+1); // edge aggregate
     }
 public:
-    HeavyLight(vector<vector<int> > const&G):n(G.size()), g(G), p(n, -1), hp(n, -1), d(n, 0), heavy(n, -1), pos(n, -1), st(n){init();}
+    Heavy_Light(vector<vector<int> > const&G):n(G.size()), g(G), p(n, -1), hp(n, -1), d(n, 0), heavy(n, -1), pos(n, -1), st(n){init();}
+	Heavy_Light(vector<vector<int> > const&G, vector<typename Segtree_Data::node_t> const&_base):n(G.size()), g(G), p(n, -1), hp(n, -1), d(n, 0), heavy(n, -1), pos(n, -1), st(n){
+        init();
+        vector<typename Segtree_Data::node_t> base(n);
+        for(int i=0;i<n;++i) base[pos[i]] = _base[i];
+        st = Segtree(base);
+    }
 
     void update(int u, int v, typename Segtree_Data::update_t const&val){
         path(u, v, [this, &val](int l, int r){st.update(l, r, val);});
@@ -104,10 +112,11 @@ public:
         return u;
     }
 };
-struct Segtreedata{
+struct Segtree_Data{
     typedef int node_t;
     typedef int update_t;
     static constexpr node_t node_ne() {return numeric_limits<int>::min();}
+    static constexpr node_t node_init() {return numeric_limits<int>::min();}
     static constexpr update_t update_ne(){return numeric_limits<int>::max();}
     static node_t merge_nodes(node_t const&left, node_t const&right){
         return node_t(max(left,right));

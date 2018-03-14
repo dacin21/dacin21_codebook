@@ -303,4 +303,93 @@ namespace NT{
         sort(ret.begin(), ret.end());
         return ret;
     }
+
+    int64_t euclid_invert(int64_t a, int64_t mod){
+        a%=mod;
+        int64_t b = mod, x = 0, x2 = 1, y = 1, y2 = 0, tmp;
+
+        while(b){
+            int64_t q = a / b, r = a % b;
+
+            tmp = x;
+            x = x2 - q * x;
+            x2 = tmp;
+
+            tmp = y;
+            y = y2 - q * y;
+            y2 = tmp;
+
+            a = b; b = r;
+        }
+        if(x2<0) x2+=mod;
+        return x2;
+    }
+    // baby and giant step
+    int64_t disc_log(int64_t base, int64_t x, int64_t p, int64_t limit){
+        int64_t block = sqrt(limit);
+        vector<pair<int64_t, int> > small;
+        int64_t a = 1;
+        for(int i=0;i<block;++i){
+            small.emplace_back(a, i);
+            a = Mod_Int<int64_t>::mul(a, base, p);
+        }
+        sort(small.begin(), small.end());
+        int64_t big_base = euclid_invert(a, p);
+        a = x;
+        for(int j=0;;++j){
+            auto it = lower_bound(small.begin(), small.end(), make_pair(a, -1));
+            if(it != small.end() && it->first == a){
+                return j*block + it->second;
+            }
+            a = Mod_Int<int64_t>::mul(a, big_base, p);
+        }
+        assert(0);
+        return 0;
+    }
+    // solves x^exp = a (mod p)
+    // exp and p have to be prime
+    // returns -1 if there is no solution
+    int64_t root_extraction(int64_t a, int64_t exp, int64_t p){
+        assert(miller_rabin(exp));
+        assert(miller_rabin(p));
+        if(a == 0) return 0;
+        if(__gcd(exp, p-1) == 1){
+            int64_t exp_inv = euclid_invert(exp, p-1);
+            assert((p-1 == 1) || exp_inv * (__int128)exp % (p-1) == 1);
+            return Mod_Int<int64_t>::pow(a, exp_inv, p);
+        }
+        // now exp divides (p-1)
+        if(Mod_Int<int64_t>::pow(a, (p-1)/exp, p)!=1){
+            // no solutions
+            return -1;
+        }
+        // find non-redidue
+        int64_t res = 2;
+        while(Mod_Int<int64_t>::pow(res, (p-1)/exp, p) == 1) ++res;
+        int t = 0;
+        int64_t s = p-1;
+        while(s%exp == 0){
+            s/=exp;
+            ++t;
+        }
+        int64_t alph = euclid_invert(exp, s);
+        int64_t A = Mod_Int<int64_t>::pow(res, (p-1)/exp, p);
+        int64_t B = Mod_Int<int64_t>::pow(a, alph*exp, p);
+        B = Mod_Int<int64_t>::mul(B, euclid_invert(a, p), p);
+        int64_t C = Mod_Int<int64_t>::pow(res, s, p);
+        int64_t h = 1;
+        for(int i=1;i<t;++i){
+                int64_t d = Mod_Int<int64_t>::pow(B, Mod_Int<int64_t>::pow(exp, t-1-i, p-1), p);
+                int64_t j = 0;
+                if(d!=1){
+                    j = disc_log(A, d, p, exp);
+                }
+                B = Mod_Int<int64_t>::mul(B, euclid_invert(Mod_Int<int64_t>::pow(C, Mod_Int<int64_t>::mul(exp, j, p-1), p), p), p);
+                h = Mod_Int<int64_t>::mul(h, euclid_invert(Mod_Int<int64_t>::pow(C, j, p), p), p);
+                C = Mod_Int<int64_t>::pow(C, exp, p);
+        }
+        int64_t ret = Mod_Int<int64_t>::mul(Mod_Int<int64_t>::pow(a, alph, p), h, p);
+
+        return ret;
+    }
 }

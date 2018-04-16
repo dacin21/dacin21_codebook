@@ -1,17 +1,25 @@
 #ifndef LP_SEIDEL_HPP
 #define LP_SEIDEL_HPP
+
+#include <vector>
+#include <iostream>
 #include "utility.hpp"
+using namespace std;
 
 //#define lp_debug(x) do{cerr << x; }while(0)
 #define lp_debug(x) do{}while(0)
 
 /**
- *  Randomized LP in expected O(d! 2^d n)
+ *  Randomized LP in expected
+ *  O(d! 4^d n)
+ *  Does exact calculations.
  */
 template<typename FLOAT>
 class Lp_Seidel{
 private:
 
+
+    // orthogonal projection of 'vec' into 'plane'
     vector<FLOAT> proj_down(vector<FLOAT> const&vec, vector<FLOAT> const&plane, size_t j){
         assert(vec.size() <= plane.size() && plane.size()<=vec.size()+1);
         assert(j+1 < plane.size());
@@ -62,7 +70,7 @@ private:
         return ret;
     }
 
-
+    // solve lp recursively
     vector<FLOAT> solve(vector<vector<FLOAT> > const &A, vector<FLOAT> const&c, int d, FLOAT const& barier_loc){
         int n=A.size();
         if(d==1){ // base case: single dimension
@@ -134,7 +142,9 @@ public:
     }
     /**
      *  Maximize c^T x
-     *  Subject to Ax <= b
+     *  subject to Ax <= b
+     *
+     *  Returns empty vector if infeasible
      */
     vector<FLOAT> solve(vector<vector<FLOAT> > A, vector<FLOAT> const&b, vector<FLOAT> const&c){
         assert(A.size() == b.size());

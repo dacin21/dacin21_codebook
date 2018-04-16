@@ -3,7 +3,9 @@
 
 #ifndef BIGNUM_HPP
 #define BIGNUM_HPP
-#include <bits/stdc++.h>
+#include <vector>
+#include <algorithm>
+#include <bitset>
 #include "utility.hpp"
 using namespace std;
 
@@ -301,7 +303,7 @@ struct Bigint_Fixedsize{
 
 /**
  *  Biginteger with fixed precision
- *  Has 32*len bits, first bit is sign
+ *  Has 32*len bits, is signed
  *
  *  Trying out more optimizations.
  */

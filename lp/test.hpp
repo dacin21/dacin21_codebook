@@ -8,19 +8,20 @@
 #include "bignum.hpp"
 #include "lp_seidel.hpp"
 #include "lp_clarkson.hpp"
-#include <boost/multiprecision/cpp_int.hpp>
+
+using namespace std;
 
 template<typename Big_Int>
 void test_factorial(unsigned int n, bool debug = false){
-    std::cout << "Computing " << n << "!\n";
+    cout << "Computing " << n << "!\n";
     Big_Int val(1);
     for(unsigned int i=1;i<=n;++i){
         val*=i;
         if(debug)
-            std::cerr << i << " : " << val << "\n";
+            cerr << i << " : " << val << "\n";
     }
-    std::cerr << "Printing\n";
-    std::cout << val << endl;
+    cerr << "Printing\n";
+    cout << val << endl;
 }
 
 template<typename Big_Int>
@@ -29,18 +30,18 @@ void test_addsub(int n){
     Big_Int b(9876543210123ll);
     Big_Int c;
     for(int it=0;it<4*n;++it){
-        std::cout << a << " + " << b << " = " << a+b << "\n";
-        std::cout << b << " + " << a << " = " << b+a << "\n";
-        std::cout << a << " - " << b << " = " << a-b << "\n";
-        std::cout << b << " - " << a << " = " << b-a << "\n";
+        cout << a << " + " << b << " = " << a+b << "\n";
+        cout << b << " + " << a << " = " << b+a << "\n";
+        cout << a << " - " << b << " = " << a-b << "\n";
+        cout << b << " - " << a << " = " << b-a << "\n";
         c = a; c+=b;
-        std::cout << a << " + " << b << " = " << c << "\n";
+        cout << a << " + " << b << " = " << c << "\n";
         c = b; c+=a;
-        std::cout << b << " + " << a << " = " << c << "\n";
+        cout << b << " + " << a << " = " << c << "\n";
         c = a; c-=b;
-        std::cout << a << " - " << b << " = " << c << "\n";
+        cout << a << " - " << b << " = " << c << "\n";
         c = b; c-=a;
-        std::cout << b << " - " << a << " = " << c << "\n";
+        cout << b << " - " << a << " = " << c << "\n";
         a=-a;
         if(it%4 == 3){
             a*=it;
@@ -52,7 +53,7 @@ void test_addsub(int n){
 
 template<typename Big_Int>
 void test_addmul(int n, int k){
-    std::cout << "Addmul test " << n << " " << k << "\n";;
+    cout << "Addmul test " << n << " " << k << "\n";;
     Rng::set_seed(635241);
     Big_Int ret(0);
     for(int i=0;i<n;++i){
@@ -61,29 +62,29 @@ void test_addmul(int n, int k){
             Big_Int mu(Rng::uniform(1ll, (long long)1e15));
             cur*=mu;
         }
-        //std::cerr << cur << "\n";
+        //cerr << cur << "\n";
         ret+=cur;
         //ret = ret + cur;
     }
-    std::cout << ret << "\n";
+    cout << ret << "\n";
 }
 
 void test_timer(){
-    std::function<int64_t(int64_t)> fib = [&](int64_t x){return x<2?x:fib(x-1)+fib(x-2);};
+    function<int64_t(int64_t)> fib = [&](int64_t x){return x<2?x:fib(x-1)+fib(x-2);};
     Timer::execute_timed<int64_t>(fib, "Timer test", 35);
     Timer::execute_timed<int64_t>(fib, "Timer test", 40);
 }
 
 
 template<typename Big_Int, typename Solver>
-void test_lp(std::string const&path){
-    std::cerr << "LP Test: " << path << "\n";
-    std::ifstream in;
+void test_lp(string const&path){
+    cerr << "LP Test: " << path << "\n";
+    ifstream in;
     in.open(path.c_str());
     int variables, constraints;
     in >> variables >> constraints;
-    std::vector<std::vector<Big_Int> > A(constraints, std::vector<Big_Int>(variables));
-    std::vector<Big_Int> b(constraints), c(variables);
+    vector<vector<Big_Int> > A(constraints, vector<Big_Int>(variables));
+    vector<Big_Int> b(constraints), c(variables);
     // read objective function
     for(auto &e:c) in >> e;
     // read constraints
@@ -91,14 +92,14 @@ void test_lp(std::string const&path){
         for(auto &e:A[i]) in >> e;
         in >> b[i];
     }
-    std::function<std::vector<Big_Int>()> solve = [&](){
+    function<vector<Big_Int>()> solve = [&](){
         Solver solver;
         return solver.solve(A, b, c);
     };
-    std::vector<Big_Int> solution = Timer::execute_timed<vector<Big_Int>>(solve, "solve LP");
-    std::cerr << "Solution:\n";
+    vector<Big_Int> solution = Timer::execute_timed<vector<Big_Int>>(solve, "solve LP");
+    cerr << "Solution:\n";
     for(auto &e:solution){
-        std::cerr << e << " ";
+        cerr << e << " ";
     }
     cerr << "\n";
 }
@@ -114,8 +115,8 @@ void test_enclosing_annulus(int n){
         e.first = Rng::uniform(-10000, 10000);
         e.second = Rng::uniform(-10000, 10000);
     }
-    Rng::set_seed(24680);
-    //Rng::timebased_seed();
+    //Rng::set_seed(24680);
+    Rng::timebased_seed();
     vector<vector<Big_Int> > A;
     vector<Big_Int> b, c;
     c = {Big_Int(0), Big_Int(0), -1, 1};
@@ -127,14 +128,14 @@ void test_enclosing_annulus(int n){
         A.push_back({Big_Int(2*e.first), Big_Int(2*e.second), 0, 1});
         b.emplace_back(e.first*e.first+e.second*e.second);
     }
-    std::function<std::vector<Big_Int>()> solve = [&](){
+    function<vector<Big_Int>()> solve = [&](){
         Solver solver;
         return solver.solve(A, b, c);
     };
-    std::vector<Big_Int> solution = Timer::execute_timed<vector<Big_Int>>(solve, "solve enclosing circle LP");
-    std::cerr << "Solution:\n";
+    vector<Big_Int> solution = Timer::execute_timed<vector<Big_Int>>(solve, "solve enclosing circle LP");
+    cerr << "Solution:\n";
     for(auto &e:solution){
-        std::cerr << e << " ";
+        cerr << e << " ";
     }
     cerr << "\n";
     if(!solution.empty()){
@@ -150,38 +151,139 @@ void test_enclosing_annulus(int n){
     }
     cerr << "\n";
 }
-using boost_int = boost::multiprecision::cpp_int;
-using boost_int1024 = boost::multiprecision::int1024_t;
-using boost_int512 = boost::multiprecision::int512_t;
 
+
+void test_codeforces_549E(){
+    // Sasha circle
+    auto codeforces_549E = [&](){
+        // 10 might be enough too, didn't check
+        using DOUBLE = Bigint_Fixedsize_Fast<12>;
+        int N, M;
+        cin >> N >> M;
+        vector<vector<DOUBLE> > A;
+        vector<DOUBLE> b, c(4);
+        A.reserve(N+M);
+        vector<pair<int, int> > p2(N), p(M);
+        for(int i=0;i<N;++i){
+            cin >> p2[i].first >> p2[i].second;
+        }
+        for(int i=0;i<M;++i){
+            cin >> p[i].first >> p[i].second;
+        }
+        for(int it=0;it<2;++it){
+            N=p.size();
+            M=p2.size();
+            A.clear();
+            b.clear();
+            for(int i=0;i<N;++i){
+                int x, y, z;
+                tie(x, y) = p[i];
+                z=x*x+y*y;
+                //A.push_back({x, y, 1, 0, z});
+                A.push_back({x, y, 1, 1});
+                b.push_back(z);
+            }
+            for(int i=0;i<M;++i){
+                int x, y, z;
+                tie(x, y) = p2[i];
+                z=x*x+y*y;
+                //A.push_back({-x, -y, 0, 1, -z});
+                A.push_back({-x, -y, -1, 1});
+                b.push_back(-z);
+            }
+            //c[2] = c[3] = 1;
+            c[3] = 1;
+            //Lp_Seidel<DOUBLE> solver;
+            Lp_Clarkson<DOUBLE> solver;
+            //Lp_Clarkson<DOUBLE, true> solver;
+            vector<DOUBLE> x = solver.solve(A, b, c);
+            //cerr << "len:\n";
+            //for(size_t i=0;i<x.size();++i) cerr << x[i].data.size() << "\n";
+            //cerr << "\n";
+            if(!x.empty()){
+                DOUBLE res = 0;
+                for(size_t i=0;i<c.size();++i) res+=x[i]*c[i];
+                DOUBLE dist = res;
+                if(dist>DOUBLE(0)){
+                    cout << "YES\n";
+                    return;
+                }
+            } else {
+                //cerr << "nope.\n";
+            }
+            p.swap(p2);
+        }
+        cout << "NO\n";
+    };
+    freopen("codeforces_549E.in", "r", stdin);
+    int TTT; cin >> TTT;
+    while(TTT--){
+        codeforces_549E();
+    }
+}
+
+
+signed test_codejam_2017_4_D(){
+    using DOUBLE = Bigint_Fixedsize_Fast<25>;
+
+    freopen("codejam_d.in", "r", stdin);
+    freopen("codejam_d.out", "w", stdout);
+    cin.tie(0); ios_base::sync_with_stdio(false);
+    int T; cin >> T;
+    for(int cas=1;cas<=T;++cas){
+        cout << "Case #" << cas << ": ";
+        cerr << "Case #" << cas << ": ";
+        int n; cin >> n;
+        vector<vector<DOUBLE> > A;
+        vector<DOUBLE> b, c(4);
+        A.reserve(n);
+        lp_debug("n: " << n);
+        for(int i=0;i<n;++i){
+            int x, y, z;
+            cin >> x >> y >> z;
+            A.push_back({x, y, z, 1});
+            b.push_back(0);
+        }
+        c[3] = 1;
+        Lp_Clarkson<DOUBLE> solver;
+
+		vector<DOUBLE> x = solver.solve(A, b, c);
+		bool did = false;
+		if(!x.empty()){
+            if(x[3] > DOUBLE(0)){
+                did = true;
+            }
+		}
+        if(did) cout << "NO\n";
+        else cout << "YES\n";
+        cerr << (did?"NO\n":"YES\n");
+    }
+    return 0;
+}
 void run_tests(){
     //test_factorial<Bigint_Fixedsize<100>>(200);
     //test_factorial<Bigint_Fixedsize<500>>(1000);
     //test_factorial<Bigint_Fixedsize_Fast<500>>(1000);
 
     //test_addsub<Bigint_Fixedsize_Fast<50>>(1);
-    //test_addmul<boost_int>(2, 2);
     //test_addmul<Bigint_Fixedsize_Fast<50>>(2, 2);
 
     //test_timer();
 
     //test_lp<Bigint_Fixedsize<3>, Lp_Seidel<Bigint_Fixedsize<3> >>("small.lp");
     //test_lp<Bigint_Fixedsize<3>, Lp_Clarkson<Bigint_Fixedsize<3> >>("small.lp");
-    //test_lp<boost::multiprecision::cpp_int, Lp_Clarkson<boost::multiprecision::cpp_int>>("small.lp");
     //test_lp<Bigint_Fixedsize_Fast<5>, Lp_Seidel<Bigint_Fixedsize_Fast<5> >>("small.lp");
 
 
-    constexpr int annulus_n = 50000;
-    for(int it=0;it<5;++it){
-        //test_enclosing_annulus<boost_int, Lp_Seidel<boost_int>>(annulus_n);
-        //test_enclosing_annulus<boost_int, Lp_Clarkson<boost_int>>(annulus_n);
-        test_enclosing_annulus<Bigint_Fixedsize_Fast<13>, Lp_Clarkson<Bigint_Fixedsize_Fast<13>>>(annulus_n);
+    constexpr int annulus_n = 300000;
+    for(int it=0;it<2;++it){
+        //test_enclosing_annulus<Bigint_Fixedsize_Fast<15>, Lp_Seidel<Bigint_Fixedsize_Fast<15>>>(annulus_n);
+        //test_enclosing_annulus<Bigint_Fixedsize_Fast<15>, Lp_Clarkson<Bigint_Fixedsize_Fast<15>>>(annulus_n);
+        test_enclosing_annulus<Bigint_Fixedsize_Fast<15>, Lp_Clarkson<Bigint_Fixedsize_Fast<15>, true>>(annulus_n);
+        //test_enclosing_annulus<Bigint_Fixedsize_Fast<25>, Lp_Clarkson<Bigint_Fixedsize_Fast<25>, true>>(annulus_n);
         //test_enclosing_annulus<Bigint_Fixedsize_Fast<13>, Lp_Seidel<Bigint_Fixedsize_Fast<13>>>(annulus_n);
-        //test_enclosing_annulus<boost_int1024, Lp_Clarkson<boost_int1024>>(annulus_n);
-        test_enclosing_annulus<boost_int512, Lp_Clarkson<boost_int512>>(annulus_n);
         cerr << "\n\n";
     }
-    //test_enclosing_annulus<boost_int, Lp_Seidel<boost_int>>(4500);
 
     //test_enclosing_annulus<Bigint_Fixedsize<10>, Lp_Clarkson<Bigint_Fixedsize<10>>>(450);
 }

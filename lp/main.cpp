@@ -1,11 +1,15 @@
-#undef _GLIBCXX_DEBUG
+//#undef _GLIBCXX_DEBUG
 
 #include "test.hpp"
 
 using namespace std;
 
+
 int main()
 {
-    run_tests();
+    test_codeforces_549E();
+    //test_codejam_2017_4_D();
+
+    //run_tests();
     return 0;
 }

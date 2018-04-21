@@ -283,7 +283,7 @@ struct Bigint_Fixedsize{
     }
     explicit operator long double()const{
         if(is_negative()){
-            return (long double)operator-();
+            return -(long double)operator-();
         }
         long double ret = 0.0;
         long double base = 1u<<bits;

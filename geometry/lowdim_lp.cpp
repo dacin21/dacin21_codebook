@@ -414,7 +414,7 @@ struct Bigint_Fixedsize_Fast{
     }
     explicit operator long double()const{
         if(sign){
-            return (long double)operator-();
+            return -(long double)operator-();
         }
         long double ret = 0.0;
         long double base = 1ll<<bits;

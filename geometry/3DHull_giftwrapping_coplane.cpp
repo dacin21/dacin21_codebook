@@ -30,6 +30,7 @@ int slope(Point const&a, Point const&b, Point const&c){
     return (x>0)-(x<0);
 }
 
+
 // 3d convex hull
 vector<array<int, 3> > convexhull3d(vector<Point> const&pts){
     int N = pts.size();
@@ -50,9 +51,11 @@ vector<array<int, 3> > convexhull3d(vector<Point> const&pts){
         int k = 0;
         while(k<N && ((pts[k]-pts[i])*(pts[j]-pts[i]) == Point({0, 0 ,0}))) ++k;
         assert(k<N);
-        for(int l=0;l<N;++l){
-            if(l==i || l==j || l==k) continue;
-            if(side(pts[i], pts[j], pts[k], pts[l])<0) k=l;
+        for(int it=0;it<2;++it){ // deal with case where we start interior
+            for(int l=0;l<N;++l){
+                if(l==i || l==j || l==k) continue;
+                if(side(pts[i], pts[j], pts[k], pts[l])<0) k=l;
+            }
         }
         cands.push_back(i);
         for(int l=0;l<N;++l){

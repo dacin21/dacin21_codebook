@@ -283,7 +283,7 @@ struct Bigint_Fixedsize{
     }
     explicit operator long double()const{
         if(is_negative()){
-            return -(long double)operator-();
+            return (long double)operator-();
         }
         long double ret = 0.0;
         long double base = 1u<<bits;
@@ -334,6 +334,7 @@ struct Bigint_Fixedsize_Fast{
     }
     void trim(){
         while(siz>1 && !data[siz-1]) --siz;
+        if(siz == 1 && data[0] == 0) sign=false;
     }
     int comp_unsigned(Bigint_Fixedsize_Fast const&o)const{
         uint16_t lim = min(siz, o.siz);

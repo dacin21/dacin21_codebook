@@ -8,6 +8,8 @@
 #include "bignum.hpp"
 #include "lp_seidel.hpp"
 #include "lp_clarkson.hpp"
+#include "lp_seidel_barrierless.hpp"
+#include "lp_clarkson_barrierless.hpp"
 
 using namespace std;
 
@@ -138,7 +140,9 @@ void test_enclosing_annulus(int n){
         cerr << e << " ";
     }
     cerr << "\n";
+    if(solution.empty()) cerr << "infeasible\n";
     if(!solution.empty()){
+		// BUG? should it be [0] and [1] instead??
         Big_Int r_sq = solution[2]*solution[4] - solution[1]*solution[1] + solution[2]*solution[2];
         Big_Int R_sq = solution[3]*solution[4] - solution[1]*solution[1] + solution[2]*solution[2];
         Big_Int area_numerator = solution[3] - solution[2];
@@ -148,6 +152,55 @@ void test_enclosing_annulus(int n){
         cerr << "area^2: " << (long double)area_numerator / (long double)solution[4] << "\n";
         cerr << "r^2: " << (long double)r_sq / (long double)(solution[4]*solution[4]) << "\n";
         cerr << "R^2: " << (long double)R_sq / (long double)(solution[4]*solution[4]) << "\n";
+    }
+    cerr << "\n";
+}
+template<typename Big_Int, typename Solver, typename Ret_Int>
+void test_enclosing_annulus_2(int n){
+    cerr << "Enclosing annulus test (" << n << ")\n";
+    cerr << "Int: " << typeid(Big_Int).name()<< ", Solver: " << typeid(Solver).name() << "\n";
+    // fixed seed for consistency
+    Rng::set_seed(8125345);
+    vector<pair<int, int> > pts(n);
+    for(auto &e:pts){
+        e.first = Rng::uniform(-1000, 1000);
+        e.second = Rng::uniform(-1000, 1000);
+    }
+    Rng::set_seed(24680);
+    //Rng::timebased_seed();
+    vector<vector<Big_Int> > A;
+    vector<Big_Int> b, c;
+    c = {Big_Int(0), Big_Int(0), -1, 1};
+    // 2x a + 2y b + (-a^2-b^2+r^2) <= x^2 y^2
+    // -2x a + -2y b - (-a^2-b^2+R^2) <= -x^2 -y^2
+    for(auto const&e:pts){
+        A.push_back({Big_Int(-2*e.first), Big_Int(-2*e.second), -1, 0});
+        b.emplace_back(-e.first*e.first-e.second*e.second);
+        A.push_back({Big_Int(2*e.first), Big_Int(2*e.second), 0, 1});
+        b.emplace_back(e.first*e.first+e.second*e.second);
+    }
+    function<vector<Ret_Int>()> solve = [&](){
+        Solver solver;
+        return solver.solve(A, b, c);
+    };
+    vector<Ret_Int> solution = Timer::execute_timed<vector<Ret_Int>>(solve, "solve enclosing circle LP");
+    cerr << "Solution:\n";
+    for(auto &e:solution){
+        cerr << e << " ";
+    }
+    cerr << "\n";
+    if(solution.empty()) cerr << "infeasible\n";
+    if(!solution.empty()){
+		// BUG? should it be [0] and [1] instead??
+        long double r_sq = (long double)solution[2]*(long double)solution[4] - (long double)solution[1]*(long double)solution[1] + (long double)solution[2]*(long double)solution[2];
+        long double R_sq = (long double)solution[3]*(long double)solution[4] - (long double)solution[1]*(long double)solution[1] + (long double)solution[2]*(long double)solution[2];
+        long double area_numerator = solution[3] - solution[2];
+        //cerr << "area^2: " << area_numerator << "/" << solution[4] << "\n";
+        //cerr << "r^2: " << r_sq << "/" << solution[4]*solution[4] << "\n";
+        //cerr << "R^2: " << R_sq << "/" << solution[4]*solution[4] << "\n";
+        cerr << "area^2: " << area_numerator / (long double)solution[4] << "\n";
+        cerr << "r^2: " << r_sq / ((long double)solution[4]*(long double)solution[4]) << "\n";
+        cerr << "R^2: " << R_sq / ((long double)solution[4]*(long double)solution[4]) << "\n";
     }
     cerr << "\n";
 }
@@ -194,17 +247,17 @@ void test_codeforces_549E(){
             //c[2] = c[3] = 1;
             c[3] = 1;
             //Lp_Seidel<DOUBLE> solver;
-            Lp_Clarkson<DOUBLE> solver;
+            Lp_Clarkson_Barrierless<DOUBLE> solver;
             //Lp_Clarkson<DOUBLE, true> solver;
-            vector<DOUBLE> x = solver.solve(A, b, c);
+            vector<Lp_Clarkson_Barrierless<DOUBLE>::Solution_Int> x = solver.solve(A, b, c);
             //cerr << "len:\n";
             //for(size_t i=0;i<x.size();++i) cerr << x[i].data.size() << "\n";
             //cerr << "\n";
             if(!x.empty()){
-                DOUBLE res = 0;
+                Lp_Clarkson_Barrierless<DOUBLE>::Solution_Int res(0);
                 for(size_t i=0;i<c.size();++i) res+=x[i]*c[i];
-                DOUBLE dist = res;
-                if(dist>DOUBLE(0)){
+                Lp_Clarkson_Barrierless<DOUBLE>::Solution_Int dist = res;
+                if(dist>Lp_Clarkson_Barrierless<DOUBLE>::Solution_Int(0)){
                     cout << "YES\n";
                     return;
                 }
@@ -232,7 +285,7 @@ signed test_codejam_2017_4_D(){
     int T; cin >> T;
     for(int cas=1;cas<=T;++cas){
         cout << "Case #" << cas << ": ";
-        cerr << "Case #" << cas << ": ";
+        //cerr << "Case #" << cas << ": ";
         int n; cin >> n;
         vector<vector<DOUBLE> > A;
         vector<DOUBLE> b, c(4);
@@ -245,18 +298,18 @@ signed test_codejam_2017_4_D(){
             b.push_back(0);
         }
         c[3] = 1;
-        Lp_Clarkson<DOUBLE> solver;
+        Lp_Clarkson_Barrierless<DOUBLE> solver;
 
-		vector<DOUBLE> x = solver.solve(A, b, c);
+		vector<Lp_Clarkson_Barrierless<DOUBLE>::Solution_Int> x = solver.solve(A, b, c);
 		bool did = false;
 		if(!x.empty()){
-            if(x[3] > DOUBLE(0)){
+            if(x[3] > Lp_Clarkson_Barrierless<DOUBLE>::Solution_Int(0)){
                 did = true;
             }
 		}
         if(did) cout << "NO\n";
         else cout << "YES\n";
-        cerr << (did?"NO\n":"YES\n");
+        //cerr << (did?"NO\n":"YES\n");
     }
     return 0;
 }
@@ -275,11 +328,13 @@ void run_tests(){
     //test_lp<Bigint_Fixedsize_Fast<5>, Lp_Seidel<Bigint_Fixedsize_Fast<5> >>("small.lp");
 
 
-    constexpr int annulus_n = 300000;
-    for(int it=0;it<2;++it){
+    constexpr int annulus_n = 100000;
+    for(int it=0;it<1;++it){
         //test_enclosing_annulus<Bigint_Fixedsize_Fast<15>, Lp_Seidel<Bigint_Fixedsize_Fast<15>>>(annulus_n);
         //test_enclosing_annulus<Bigint_Fixedsize_Fast<15>, Lp_Clarkson<Bigint_Fixedsize_Fast<15>>>(annulus_n);
-        test_enclosing_annulus<Bigint_Fixedsize_Fast<15>, Lp_Clarkson<Bigint_Fixedsize_Fast<15>, true>>(annulus_n);
+        //test_enclosing_annulus<Bigint_Fixedsize_Fast<15>, Lp_Clarkson<Bigint_Fixedsize_Fast<15>, true>>(annulus_n);
+        test_enclosing_annulus_2<Bigint_Fixedsize_Fast<15>, Lp_Seidel<Bigint_Fixedsize_Fast<15>>, Bigint_Fixedsize_Fast<15>>(annulus_n);
+        test_enclosing_annulus_2<Bigint_Fixedsize_Fast<15>, Lp_Clarkson_Barrierless<Bigint_Fixedsize_Fast<15>, true>, Barrier_Int<Bigint_Fixedsize_Fast<15>>>(annulus_n);
         //test_enclosing_annulus<Bigint_Fixedsize_Fast<25>, Lp_Clarkson<Bigint_Fixedsize_Fast<25>, true>>(annulus_n);
         //test_enclosing_annulus<Bigint_Fixedsize_Fast<13>, Lp_Seidel<Bigint_Fixedsize_Fast<13>>>(annulus_n);
         cerr << "\n\n";

@@ -1,9 +1,9 @@
-#ifndef LP_CLARKSON_HPP
-#define LP_CLARKSON_HPP
+#ifndef LP_CLARKSON_BARRIERLESS_HPP
+#define LP_CLARKSON_BARRIERLESS_HPP
 
 #include <vector>
 #include <algorithm>
-#include "lp_seidel.hpp"
+#include "lp_seidel_barrierless.hpp"
 
 /**
  *  Randomized LP, runtime is expected
@@ -12,7 +12,9 @@
  *  Does exact calculations.
  */
 template<typename Big_Int, bool use_two_phase = true>
-class Lp_Clarkson{
+class Lp_Clarkson_Barrierless{
+public:
+    using Solution_Int = Barrier_Int<Big_Int>;
 private:
     /**
      *  Returns a sub-multiset of size siz uniformly at random
@@ -45,17 +47,17 @@ private:
         return ret;
     }
     /// violation check
-    bool is_satisfied(vector<Big_Int> const&x, vector<Big_Int> const&a){
+    bool is_satisfied(vector<Solution_Int> const&x, vector<Big_Int> const&a){
         assert(x.size() == a.size());
-        Big_Int ret=0;
+        Solution_Int ret(0);
         for(size_t i=0;i<x.size();++i){
             ret+=x[i]*a[i];
         }
-        return ret <= Big_Int(0);
+        return ret <= Solution_Int(0);
     }
-    vector<Big_Int> solve_two(vector<vector<Big_Int> > const&A, vector<Big_Int> const&c){
+    vector<Solution_Int> solve_two(vector<vector<Big_Int> > const&A, vector<Big_Int> const&c){
         const unsigned int sample_size = c.size()*c.size()*4;
-        Lp_Seidel<Big_Int> sub_lp;
+        Lp_Seidel_Barierless<Big_Int> sub_lp;
         // to few constrains -> use other solver
         if(A.size() < sample_size){
             return sub_lp.solve(A, c);
@@ -63,7 +65,7 @@ private:
             int constraints = A.size();
             int variables = c.size();
             vector<int64_t> weight(constraints, 1);
-            vector<Big_Int> x;
+            vector<Solution_Int> x;
             vector<vector<Big_Int> > subproblem_A;
             vector<char> is_violated(constraints, 0);
             for(unsigned int iteration=1;;++iteration){
@@ -103,14 +105,14 @@ private:
             return x;
         }
     }
-    vector<Big_Int> solve_one(vector<vector<Big_Int> > const&A, vector<Big_Int> const&c){
+    vector<Solution_Int> solve_one(vector<vector<Big_Int> > const&A, vector<Big_Int> const&c){
         const unsigned int constraints = A.size(), variables = c.size();
         if(constraints <= variables*variables*6){
             return solve_two(A, c);
         } else {
             const unsigned int sqrt_constraints = sqrt(constraints);
             const unsigned int sample_size = variables * sqrt(constraints);
-            vector<Big_Int> x;
+            vector<Solution_Int> x;
             vector<vector<Big_Int> > subproblem_A;
             vector<int> violations;
             for(unsigned int iteration=1;;++iteration){
@@ -152,7 +154,7 @@ private:
 
 
 public:
-    vector<Big_Int> solve(vector<vector<Big_Int> > const&A, vector<Big_Int> const&c){
+    vector<Solution_Int> solve(vector<vector<Big_Int> > const&A, vector<Big_Int> const&c){
         if(use_two_phase){
             return solve_one(A, c);
         } else {
@@ -166,7 +168,7 @@ public:
      *
      *  Returns empty vector if infeasible
      */
-    vector<Big_Int> solve(vector<vector<Big_Int> > A, vector<Big_Int> const&b, vector<Big_Int> const&c){
+    vector<Solution_Int> solve(vector<vector<Big_Int> > A, vector<Big_Int> const&b, vector<Big_Int> const&c){
         assert(A.size() == b.size());
         for(unsigned int i=0;i<A.size();++i){
             A[i].push_back(-b[i]);

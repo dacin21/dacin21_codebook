@@ -61,6 +61,7 @@ struct PushRelabelMatching {
                                 } else enq(e.to);
                             }
                         }
+                        break;
                     }
                 } else if (H[u] == H[cur[u]->to]+1){
                     if(~match[cur[u]->to]) enq(match[cur[u]->to]);
@@ -102,16 +103,16 @@ namespace FIO{
         }
         readuint(b...);
     }
-	template<typename T, typename ...S>
+    template<typename T, typename ...S>
     void readint(T &a, S& ...b){
         a=0;
         int x=gc(), s=1;;
         while(x!='-' && (x<'0' || x>'9')) x=gc();
-		if(x=='-'){ s=-s; x=gc(); }
+        if(x=='-'){ s=-s; x=gc(); }
         while(x>='0' && x<='9'){
             a = a*10+x-'0'; x=gc();
         }
-		if(s<0) a=-a;
+        if(s<0) a=-a;
         readint(b...);
     }
 }
@@ -120,17 +121,17 @@ using FIO::readuint;
 signed matching(){
     int N, M, E;
     readuint(N, M, E);
-	//scanf("%d%d%d", &N, &M, &E);
-	PushRelabelMatching<> fl(N+1, M+1);
-	int u, v;
-	for (int i = 0; i < E; ++i) {
+    //scanf("%d%d%d", &N, &M, &E);
+    PushRelabelMatching<> fl(N+1, M+1);
+    int u, v;
+    for (int i = 0; i < E; ++i) {
         readuint(u, v);
-		//scanf("%d%d", &u, &v);
-		fl.add_edge(u, v);
-	}
-	int ans = fl.max_matching();
+        //scanf("%d%d", &u, &v);
+        fl.add_edge(u, v);
+    }
+    int ans = fl.max_matching();
     printf("%d\n",ans);
-	return 0;
+    return 0;
 }
 
 signed main() {

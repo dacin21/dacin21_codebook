@@ -205,6 +205,93 @@ public:
             else vout[i] = l + (m<<SPLIT_BITS) + (r<<(2*SPLIT_BITS));
         }
     }
+	    static void poly_mul_third(ivec& vout, ivec const&v1, ivec const&v2, const size_t mod = 0){
+        if(v1.size() > v2.size()) return poly_mul_third(vout, v2, v1, mod);
+        constexpr int BITS = 17, MASK = (1<<BITS) - 1;
+        const size_t out_size = v1.size() + v2.size() - 1;
+        const size_t n = next_2pow(out_size);
+
+        static cvec c1, c2, c3;
+        c1.resize(n); c2.resize(n), c3.resize(n);
+        for(size_t i=0;i<v1.size();++i){
+            int64_t a = v1[i] >> (2*BITS), b = (v1[i] >> BITS) & MASK, c = v1[i] & MASK;
+            int64_t d = v2[i] >> (2*BITS), e = (v2[i] >> BITS) & MASK, f = v2[i] & MASK;
+            if(MASK-c < c){ c-= 1<<BITS; ++b; }
+            if(MASK-f < f){ f-= 1<<BITS; ++e; }
+            if(MASK-b < b){ b-= 1<<BITS; ++a; }
+            if(MASK-e < e){ e-= 1<<BITS; ++d; }
+            c1[i] = complex_t(a, b);
+            c2[i] = complex_t(c, d);
+            c3[i] = complex_t(e, f);
+        }
+        for(size_t i=v1.size();i<v2.size();++i){
+            int64_t d = v2[i] >> (2*BITS), e = (v2[i] >> BITS) & MASK, f = v2[i] & MASK;
+            if(MASK-f < f){ f-= 1<<BITS; ++e; }
+            if(MASK-e < e){ e-= 1<<BITS; ++d; }
+            c2[i] = complex_t(0, d);
+            c3[i] = complex_t(e, f);
+        }
+        fill(c1.begin()+v1.size(), c1.end(), complex_t(0, 0));
+        fill(c2.begin()+v2.size(), c2.end(), complex_t(0, 0));
+        fill(c3.begin()+v2.size(), c3.end(), complex_t(0, 0));
+        fft_inplace<false>(c1);
+        fft_inplace<false>(c2);
+        fft_inplace<false>(c3);
+
+        const double factor = 0.25 / static_cast<double>(c1.size());
+        const complex_t IMAG (0.0, 1.0);
+        const complex_t NIMAG = conj(IMAG);
+        const complex_t NIMAG_factor = NIMAG * factor;
+
+        /*for(int i=0;i<=n/2;++i){
+            int j = (n-i)&(n-1); //reverse index
+            complex_t rx = (c1[i] + conj(c1[j]));
+            complex_t ix = (c1[i] - conj(c1[j])) * NIMAG;
+            complex_t ry = (c2[i] + conj(c2[j]));
+            complex_t iy = (c2[i] - conj(c2[j])) * NIMAG_factor;
+            complex_t rz = (c3[i] + conj(c3[j])) * factor;
+            complex_t iz = (c3[i] - conj(c3[j])) * NIMAG_factor;
+
+            c1[i] = (ry*iz + (ix*iz + ry*rz) * IMAG);
+            c2[i] = (rx*iz + ix*rz + ry*iy + (ix*iz + ry*rz) * IMAG);
+            c3[i] = (ry*iz);
+            c1[j] = conj(ry*iz + (ix*iz + ry*rz) * NIMAG);
+            c2[j] = conj(rx*iz + ix*rz + ry*iy + (ix*iz + ry*rz) * NIMAG);
+            c3[j] = conj(ry*iz);
+        }*/
+        for(int i=0;i<=n/2;++i){
+            int j = (n-i)&(n-1); //reverse index
+            complex_t rx = (c1[i] + conj(c1[j]));
+            complex_t ix = (c1[i] - conj(c1[j]));
+            complex_t ry = (c2[i] + conj(c2[j]));
+            complex_t iy = (c2[i] - conj(c2[j]));
+            complex_t rz = (c3[i] + conj(c3[j]));
+            complex_t iz = (c3[i] - conj(c3[j]));
+
+            c1[i] = (ry*iz + (ix*iz - ry*rz)) * NIMAG_factor;
+            c2[i] = (rx*iz + ix*rz + ry*iy + (ix*iz - ry*rz)) * NIMAG_factor;
+            c3[i] = (ry*iz) * NIMAG_factor;
+            c1[j] = conj((ry*iz + (ry*rz - ix*iz)) * NIMAG_factor);
+            c2[j] = conj((rx*iz + ix*rz + ry*iy + (ry*rz - ix*iz)) * NIMAG_factor);
+            c3[j] = conj(ry*iz * NIMAG_factor);
+        }
+        fft_inplace<true>(c1);
+        fft_inplace<true>(c2);
+        fft_inplace<true>(c3);
+
+        vout.resize(out_size);
+        //double err = 0.0;
+        //double maxval = 0.0;
+        for(int i=0;i<out_size;++i){
+            int64_t a = llround(c1[i].real()), b = llround(c1[i].imag()), c = llround(c2[i].real());
+            int64_t d = llround(c2[i].imag()), e = llround(c3[i].real()), f = llround(c3[i].imag());
+            //double real_error = max(abs(a-c1[i].real()), max(abs(b-c1[i].imag()), max(abs(c-c2[i].real()), max(abs(d-c2[i].imag()), max(abs(e-c3[i].real()), abs(f-c3[i].imag())))))); err = max(err, real_error);
+            //maxval = max(maxval, max(abs(c1[i].real()), max(abs(c1[i].imag()), max(abs(c2[i].real()), max(abs(c2[i].imag()), max(abs(c3[i].real()), abs(c3[i].imag())))))));
+            vout[i] = (((((((((((f << BITS) % mod + e) << BITS) % mod + d) << BITS) % mod + c) << BITS) % mod) + b) << BITS) % mod + a)% mod;
+            if(vout[i] < 0) vout[i] += mod;
+        }
+        //cerr << "=> " << err << "  " << maxval << "\n";
+    }
     static void poly_square_split(ivec& vout, ivec const&v1, const size_t mod = 0){
         static cvec c1, c2;
         const size_t out_size = 2*v1.size() - 1;

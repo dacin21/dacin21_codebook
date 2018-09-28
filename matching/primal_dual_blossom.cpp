@@ -1,11 +1,10 @@
+// based on 'mwmatching.py' python code from http://jorisvr.nl/article/maximum-matching
 /*
  * Based on a Python implementation of the general maximum Matching algorithm
  * uses a primal-dual method.
  * runs in O(V^3)
  * is quite complicated
 */
-#pragma GCC optimize ("O3")
-#pragma GCC optimize ("whole-program")
 #include <bits/stdc++.h>
 using namespace std;
 #define donone(x) do{}while(0)
@@ -14,7 +13,7 @@ using namespace std;
 #define asser(x) donone(x)
 //#define asser(x) assert(x)
 struct Matcher{
-  typedef long long cost_t;
+  using cost_t = long long;
   int N, M; // number of vertices and edges
   cost_t max_edge_weight=0;
   vector<pair<array<int, 2>, cost_t> > edges;//edge list
@@ -23,10 +22,11 @@ struct Matcher{
   vector<int> vertex_state;//0:unvisited   1:below/-/odd/T   2:above/+/even/S
   vector<int> pred; // predecessor node in DFS tree
   vector<int> blossom_top, blossom_parent, blossom_base; //highest level blossom, parent-level blossom, blossom-representative
-  vector<vector<int> > blossom_childs;// list of all nodes contained in this blossom
-  vector<vector<int> > blossom_endpoints;// = blossom_childs but in edge list ???
+  // would use std::optional with c++17 instead of std::unique_ptr
+  vector<unique_ptr<vector<int> > > blossom_childs;// list of all nodes contained in this blossom
+  vector<unique_ptr<vector<int> > > blossom_endpoints;// = blossom_childs but in edge list ???
+  vector<unique_ptr<vector<int> > > best_blossom_edges;
   vector<int> best_edge;
-  vector<vector<int> > best_blossom_edges;
   vector<int> free_blossom_indicies;
   vector<char> is_edge_allowed;
   vector<cost_t> dual;
@@ -62,7 +62,7 @@ struct Matcher{
       ret.emplace_back(vertex);
       return;
     } else
-      for(auto const &e:blossom_childs[vertex])
+      for(auto const &e:*blossom_childs[vertex])
         get_blossom_leaves(e, ret);
   }
 
@@ -133,27 +133,27 @@ struct Matcher{
     blossom_base[blossom_index] = base;
     blossom_parent[blossom_index] = -1;
     blossom_parent[b2]=blossom_index;
-    blossom_childs[blossom_index].clear();
-    blossom_endpoints[blossom_index].clear();
+    blossom_childs[blossom_index] = make_unique<vector<int> >();
+    blossom_endpoints[blossom_index] = make_unique<vector<int> >();
     /// extract blossom pseudo-nodes
     while(v2!=b2){
         blossom_parent[v2]=blossom_index;
-        blossom_childs[blossom_index].push_back(v2);
-        blossom_endpoints[blossom_index].push_back(pred[v2]);
+        blossom_childs[blossom_index]->push_back(v2);
+        blossom_endpoints[blossom_index]->push_back(pred[v2]);
         asser(vertex_state[v2]==1||(vertex_state[v2]==2 && pred[v2] == mate[blossom_base[v2]]));
         asser(pred[v2]!=-1);
         v = get_endpoint(pred[v2]);
         v2 = blossom_top[v];
     }
-    blossom_childs[blossom_index].push_back(b2);
-    reverse(blossom_childs[blossom_index].begin(), blossom_childs[blossom_index].end());
-    reverse(blossom_endpoints[blossom_index].begin(), blossom_endpoints[blossom_index].end());
-    blossom_endpoints[blossom_index].emplace_back(2*bridge_edge);
+    blossom_childs[blossom_index]->push_back(b2);
+    reverse(blossom_childs[blossom_index]->begin(), blossom_childs[blossom_index]->end());
+    reverse(blossom_endpoints[blossom_index]->begin(), blossom_endpoints[blossom_index]->end());
+    blossom_endpoints[blossom_index]->emplace_back(2*bridge_edge);
 
     while(w2!=b2){
         blossom_parent[w2] = blossom_index;
-        blossom_childs[blossom_index].push_back(w2);
-        blossom_endpoints[blossom_index].push_back(pred[w2]^1);
+        blossom_childs[blossom_index]->push_back(w2);
+        blossom_endpoints[blossom_index]->push_back(pred[w2]^1);
         asser(vertex_state[w2]==1||(vertex_state[w2]==2 && pred[w2] == mate[blossom_base[w2]]));
         asser(pred[w2]!=-1);
         w = get_endpoint(pred[w2]);
@@ -177,17 +177,17 @@ struct Matcher{
       blossom_top[e] = blossom_index;
     }
     vector<int> best_edge_to(2*N, -1);
-    for(auto const &bv:blossom_childs[blossom_index]){
+    for(auto const &v2:*blossom_childs[blossom_index]){
       vector<int> nblist;
-      if(best_blossom_edges[bv].empty()){
+      if(!best_blossom_edges[v2]){
         tmp.clear();
-        get_blossom_leaves(bv, tmp);
+        get_blossom_leaves(v2, tmp);
         for(auto const &vert:tmp)
           for(auto const &p:graph[vert]){
             nblist.push_back(p/2);
           }
       } else {
-        nblist = best_blossom_edges[bv];
+        nblist = *best_blossom_edges[v2];
       }
       for(auto const &k:nblist){
         int i, j;
@@ -200,17 +200,17 @@ struct Matcher{
           best_edge_to[j2] = k;
         }
       }
-      best_blossom_edges[bv].clear();
-      best_edge[bv] = -1;
+      best_blossom_edges[v2].reset();
+      best_edge[v2] = -1;
     }
 
-    best_blossom_edges[blossom_index].clear();
+    best_blossom_edges[blossom_index] = make_unique<vector<int> >();
     for(auto const &e:best_edge_to)
       if(e!=-1)
-        best_blossom_edges[blossom_index].push_back(e);
+        best_blossom_edges[blossom_index]->push_back(e);
 
     best_edge[blossom_index]=-1;
-    for(auto const &e:best_blossom_edges[blossom_index])
+    for(auto const &e:*best_blossom_edges[blossom_index])
       if(best_edge[blossom_index]==-1 || slack(e) < slack(best_edge[blossom_index]))
         best_edge[blossom_index]=e;
   }
@@ -220,7 +220,7 @@ struct Matcher{
   void expand_blossom(int blossom, bool is_endstage){
     DBG("expanding blossom: " << blossom << " (" << is_endstage << ")\n");
     //remove parent relation
-    for(auto const &e:blossom_childs[blossom]){
+    for(auto const &e:*blossom_childs[blossom]){
       blossom_parent[e] = -1;
       if(e<N)
         blossom_top[e]=e;
@@ -238,9 +238,9 @@ struct Matcher{
       //special case of odd blossom
       asser(pred[blossom]!=-1);
       int entry_child = blossom_top[get_endpoint(pred[blossom]^1)];
-      int j = find(blossom_childs[blossom].begin(), blossom_childs[blossom].end(), entry_child) - blossom_childs[blossom].begin();
+      int j = find(blossom_childs[blossom]->begin(), blossom_childs[blossom]->end(), entry_child) - blossom_childs[blossom]->begin();
       int jstep, endptrick, jIndex;
-      int blossom_child_count = (int)blossom_childs[blossom].size();
+      int blossom_child_count = (int)blossom_childs[blossom]->size();
       if(j&1){
         j-=blossom_child_count;
         jstep = 1;
@@ -252,36 +252,36 @@ struct Matcher{
       int p = pred[blossom];
       while(j!=0){
         vertex_state[get_endpoint(p^1)]=0;
-        jIndex = (j - endptrick)%blossom_child_count;
+        jIndex = (j - endptrick);
         if(jIndex<0)jIndex+=blossom_child_count;
 
-        vertex_state[get_endpoint(blossom_endpoints[blossom][jIndex]^endptrick^1)]=0;
+        vertex_state[get_endpoint((*blossom_endpoints[blossom])[jIndex]^endptrick^1)]=0;
         assign_label(get_endpoint(p^1), 1, p);
-        is_edge_allowed[blossom_endpoints[blossom][jIndex]/2] = true;
+        is_edge_allowed[(*blossom_endpoints[blossom])[jIndex]/2] = true;
 
         j+=jstep;
-        jIndex = (j - endptrick)%blossom_child_count;
+        jIndex = (j - endptrick);
         if(jIndex<0)jIndex+=blossom_child_count;
 
-        p=blossom_endpoints[blossom][jIndex]^endptrick;
+        p=(*blossom_endpoints[blossom])[jIndex]^endptrick;
         is_edge_allowed[p/2]=true;
         j+=jstep;
       }
 
 
-      int bv = blossom_childs[blossom][0];
+      int bv = (*blossom_childs[blossom])[0];
       vertex_state[get_endpoint(p^1)] = vertex_state[bv] = 1;
       pred[get_endpoint(p^1)] = pred[bv] = p;
       best_edge[bv]=-1;
 
       j+=jstep;
-      jIndex = (j)%blossom_child_count;
+      jIndex = j;
       if(jIndex<0)jIndex+=blossom_child_count;
-      while(blossom_childs[blossom][jIndex]!=entry_child){
-        bv = blossom_childs[blossom][jIndex];
+      while((*blossom_childs[blossom])[jIndex]!=entry_child){
+        bv = (*blossom_childs[blossom])[jIndex];
         if(vertex_state[bv] == 2){
           j+=jstep;
-          jIndex = (j)%blossom_child_count;
+          jIndex = j;
           if(jIndex<0)jIndex+=blossom_child_count;
           continue;
         }
@@ -298,15 +298,15 @@ struct Matcher{
           }
 
         j+=jstep;
-        jIndex = (j)%blossom_child_count;
+        jIndex = j;
         if(jIndex<0)jIndex+=blossom_child_count;
       }
     }
     // free blossom information
     vertex_state[blossom] = pred[blossom] = -1;
-    blossom_childs[blossom].clear();
-    blossom_endpoints[blossom].clear();
-    best_blossom_edges[blossom].clear();
+    blossom_childs[blossom].reset();
+    blossom_endpoints[blossom].reset();
+    best_blossom_edges[blossom].reset();
     blossom_base[blossom]=-1;
     best_edge[blossom]=-1;
     free_blossom_indicies.push_back(blossom);
@@ -320,8 +320,8 @@ struct Matcher{
     if(v2 >= N)
       augment_blossom(v2, vertex); // recurse on sub-blossom
 
-    int i, j, jIndex, jstep, endptrick, blossom_child_count = blossom_childs[blossom].size();
-    i=j=find(blossom_childs[blossom].begin(), blossom_childs[blossom].end(), v2) - blossom_childs[blossom].begin();
+    int i, j, jIndex, jstep, endptrick, blossom_child_count = blossom_childs[blossom]->size();
+    i=j=find(blossom_childs[blossom]->begin(), blossom_childs[blossom]->end(), v2) - blossom_childs[blossom]->begin();
 
     if(i&1){
       j-=blossom_child_count;
@@ -331,23 +331,23 @@ struct Matcher{
       jstep=-1;
       endptrick=1;
     }
-    jIndex = j%blossom_child_count;
+    jIndex = j;
     if(jIndex<0)jIndex+=blossom_child_count;
-    while(jIndex!=0){
+    while(j!=0){
       //recurse on sub-blossoms
       j+=jstep;
-      jIndex = j%blossom_child_count;
+      jIndex = j;
       if(jIndex<0)jIndex+=blossom_child_count;
-      v2 = blossom_childs[blossom][jIndex];
-      jIndex = (j - endptrick)%blossom_child_count;
+      v2 = (*blossom_childs[blossom])[jIndex];
+      jIndex = (j - endptrick);
       if(jIndex<0)jIndex+=blossom_child_count;
-      int p = blossom_endpoints[blossom][jIndex] ^ endptrick;
+      int p = (*blossom_endpoints[blossom])[jIndex] ^ endptrick;
       if(v2>=N)
         augment_blossom(v2, get_endpoint(p));
       j+=jstep;
-      jIndex = j%blossom_child_count;
+      jIndex = j;
       if(jIndex<0)jIndex+=blossom_child_count;
-      v2 = blossom_childs[blossom][jIndex];
+      v2 = (*blossom_childs[blossom])[jIndex];
       if(v2>=N)
         augment_blossom(v2, get_endpoint(p^1));
 
@@ -356,17 +356,18 @@ struct Matcher{
       mate[get_endpoint(p^1)]=p;
     }
     //rotate to get new base at index 0
-    rotate(blossom_childs[blossom].begin(), blossom_childs[blossom].begin()+i, blossom_childs[blossom].end());
-    rotate(blossom_endpoints[blossom].begin(), blossom_endpoints[blossom].begin()+i, blossom_endpoints[blossom].end());
-    blossom_base[blossom] = blossom_base[blossom_childs[blossom][0]];
+    rotate(blossom_childs[blossom]->begin(), blossom_childs[blossom]->begin()+i, blossom_childs[blossom]->end());
+    rotate(blossom_endpoints[blossom]->begin(), blossom_endpoints[blossom]->begin()+i, blossom_endpoints[blossom]->end());
+    blossom_base[blossom] = blossom_base[(*blossom_childs[blossom])[0]];
     asser(blossom_base[blossom]==vertex);
   }
 
   void augment_matching(int edge_index){
     DBG("augmeting with: " << edges[edge_index].first[0] << "/" << edges[edge_index].first[1] << " (" << edges[edge_index].second << ")\n");
     int v = edges[edge_index].first[0], w = edges[edge_index].first[1];
-    for(int s=v, p2=2*edge_index+1;p2>=2*edge_index;s=w, --p2){//hack to run for both v and w
-      int p = p2;
+    for(auto const& e : {make_pair(v, 2*edge_index+1), make_pair(w, 2*edge_index)}){//hack to run for both v and w
+      int s, p;
+      tie(s, p) = e;
       for(;;){
         int s2 = blossom_top[s];
         asser(vertex_state[s2]==2);
@@ -421,7 +422,7 @@ struct Matcher{
     for(int t=0;t<N;++t){
       fill(vertex_state.begin(), vertex_state.begin()+2*N, 0);//clear states
       fill(best_edge.begin(), best_edge.begin()+2*N, -1);
-      fill(best_blossom_edges.begin(), best_blossom_edges.begin()+N, vector<int>());
+      fill(best_blossom_edges.begin()+N, best_blossom_edges.end(), nullptr);
       fill(is_edge_allowed.begin(), is_edge_allowed.begin()+M, false);
       q = queue<int>();
 
@@ -473,7 +474,7 @@ struct Matcher{
               }
             } else if(vertex_state[blossom_top[w]] == 2){
               //can't rech other blososm yet
-              int b = blossom_top[w];
+              int b = blossom_top[v];
               if(best_edge[b] == -1 || edge_index_slack < slack(best_edge[b]))
                 best_edge[b] = edge_index;
             } else if(vertex_state[w] == 0){
@@ -606,6 +607,7 @@ struct Matcher{
     for(auto &e:edges){
         if(mate[e.first[0]] == e.first[1]){
             best[e.first[0]] = min(best[e.first[0]], e.second);
+            best[e.first[1]] = min(best[e.first[1]], e.second);
         }
     }
     for(int i=0;i<N;++i){

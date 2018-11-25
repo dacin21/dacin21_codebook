@@ -1,18 +1,16 @@
-
 // Integer factorization in O(N^{1/4}
 // uses squfof from msieve https://github.com/radii/msieve
 // with fixes to work for n = p^3
 // works up to 10^18
 // probably fails on 5003^5 which is ~10^{18.5}
 
-namespace NT{
-    template<typename T>
-    struct bigger_type{};
+namespace Factor {
+    template<typename T, typename SFINAE = void> struct bigger_type{};
     template<typename T> using bigger_type_t = typename bigger_type<T>::type;
-    template<> struct bigger_type<int>{using type = long long;};
-    template<> struct bigger_type<unsigned int>{using type = unsigned long long;};
-    template<> struct bigger_type<long long>{using type = __int128;};
-    template<> struct bigger_type<unsigned long long>{using type = unsigned __int128;};
+    template<typename T> struct bigger_type<T, typename enable_if<is_integral<T>::value && is_signed<T>::value && sizeof(T) == 4>::type>{using type = long long;};
+    template<typename T> struct bigger_type<T, typename enable_if<is_integral<T>::value && !is_signed<T>::value && sizeof(T) == 4>::type>{using type = unsigned long long;};
+    template<typename T> struct bigger_type<T, typename enable_if<is_integral<T>::value && is_signed<T>::value && sizeof(T) == 8>::type>{using type = __int128;};
+    template<typename T> struct bigger_type<T, typename enable_if<is_integral<T>::value && !is_signed<T>::value && sizeof(T) == 8>::type>{using type = unsigned __int128;};
 
     template<typename int_t = unsigned long long>
     struct Mod_Int{
@@ -39,7 +37,8 @@ namespace NT{
     };
 
     template<typename T>
-    typename enable_if<is_integral<T>::value, bool>::type is_prime(T x){
+    bool is_prime(T x){
+        static_assert(is_integral<T>::value);
         if(x<T(4)) return x>T(1);
         for(T i=2;i*i<=x;++i){
             if(x%i == 0) return false;
@@ -48,7 +47,8 @@ namespace NT{
     }
 
     template<typename T>
-    typename enable_if<is_integral<T>::value, bool>::type miller_rabin_single(T const&x, T base){
+    bool miller_rabin_single(T const&x, T base){
+        static_assert(is_integral<T>::value);
         if(x<T(4)) return x>T(1);
         if(x%2 == 0) return false;
         base%=x;
@@ -72,22 +72,25 @@ namespace NT{
     }
 
     template<typename T>
-    typename enable_if<is_integral<T>::value, bool>::type miller_rabin_multi(T const&){return true;}
+    bool miller_rabin_multi(T const&){return true;}
     template<typename T, typename... S>
-    typename enable_if<is_integral<T>::value, bool>::type miller_rabin_multi(T const&x, T const&base, S const&...bases){
+    bool miller_rabin_multi(T const&x, T const&base, S const&...bases){
+        static_assert(is_integral<T>::value);
         if(!miller_rabin_single(x, base)) return false;
         return miller_rabin_multi(x, bases...);
     }
 
     template<typename T>
-    typename enable_if<is_integral<T>::value, bool>::type miller_rabin(T const&x){
+    bool miller_rabin(T const&x){
+        static_assert(is_integral<T>::value);
         if(x < 316349281) return miller_rabin_multi(x, T(11000544), T(31481107));
         if(x < 4759123141ull) return miller_rabin_multi(x, T(2), T(7), T(61));
         return miller_rabin_multi(x, T(2), T(325), T(9375), T(28178), T(450775), T(9780504), T(1795265022));
     }
 
     template<typename T>
-    typename enable_if<is_integral<T>::value, T>::type isqrt(T const&x){
+    T isqrt(T const&x){
+        static_assert(is_integral<T>::value);
         assert(x>=T(0));
         T ret = static_cast<T>(sqrtl(x));
         while(ret>0 && ret*ret>x) --ret;
@@ -96,7 +99,8 @@ namespace NT{
         return ret;
     }
     template<typename T>
-    typename enable_if<is_integral<T>::value, T>::type icbrt(T const&x){
+    T icbrt(T const&x){
+        static_assert(is_integral<T>::value);
         assert(x>=T(0));
         T ret = static_cast<T>(cbrt(x));
         while(ret>0 && ret*ret*ret>x) --ret;
@@ -250,39 +254,20 @@ namespace NT{
                 return factor;
             }
         }
-        assert(0);
         cerr << "failed to factor: " << x << "\n";
         assert(0);
         return 1;
     }
 
     template<typename T>
-    typename enable_if<is_integral<T>::value, vector<T>>::type factorize_brute(T x){
-        vector<T> ret;
-        while(x%2 == 0){
-            x/=2;
-            ret.push_back(2);
-        }
-        for(uint32_t i=3;i*(T)i <= x;i+=2){
-            while(x%i == 0){
-                x/=i;
-                ret.push_back(i);
-            }
-        }
-        if(x>1) ret.push_back(x);
-        return ret;
-    }
-
-    template<typename T>
-    typename enable_if<is_integral<T>::value, vector<T>>::type factorize(T x){
-        //cerr << "factor: " << x << "\n";
+    vector<T> factorize(T x){
+        static_assert(is_integral<T>::value);
         vector<T> ret;
         const uint32_t trial_limit = 5000;
-        for(uint32_t i=2;i<trial_limit && i*i <= x;++i){
-            while(x%i == 0){
-                x/=i;
-                ret.push_back(i);
-            }
+        auto trial = [&](int i){while(x%i == 0){x/=i; ret.push_back(i);}};
+        trial(2); trial(3);
+        for(uint32_t i=5, j=2;i<trial_limit && i*i <= x;i+=j, j=6-j){
+            trial(i);
         }
         if(x>1){
             static stack<T> s;
@@ -292,7 +277,6 @@ namespace NT{
                 if(!miller_rabin(x)){
                     T factor = squfof(x);
                     if(factor == 1 || factor == x){assert(0); return ret;}
-                    //cerr << x << " -> " << factor << "\n";
                     s.push(factor);
                     s.push(x/factor);
                 } else {

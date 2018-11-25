@@ -413,6 +413,7 @@ struct Layer_Structure{
         asser2(levels[level].connected(a, b));
         bool was_in_forest = get<2>(edges[edge_index]);
         remove_edge(edge_index, level);
+        free_edges.push_back(edge_index);
         if(!was_in_forest) return;
         asser2(level+1 == (int)levels.size() || !levels[level+1].connected(a, b));
         for(int i=level;i>=0;--i){
@@ -460,7 +461,6 @@ struct Layer_Structure{
                 levels[i].set_mark(from, 0);
                 return false;
             })){
-                free_edges.push_back(edge_index);
                 break;
             }
         }

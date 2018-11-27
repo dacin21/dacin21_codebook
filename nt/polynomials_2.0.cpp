@@ -1,8 +1,8 @@
 /*
- *	fft with doubles
- *	fft with doubles
- *	operations in prime fields
- *	operations on polynomials and power series
+ *  fft with doubles
+ *  fft with doubles
+ *  operations in prime fields
+ *  operations on polynomials and power series
  */
 
 
@@ -66,13 +66,13 @@ class Fft{
     }
     static void bitflip(cvec &v){
         int n = v.size();
-		for(int i=1, j=0;i<n;++i){
-			int m = n >> 1;
-			for(;j>=m;m >>= 1)
-				j -= m;
-			j += m;
-			if(i < j) std::swap(v[i], v[j]);
-		}
+        for(int i=1, j=0;i<n;++i){
+            int m = n >> 1;
+            for(;j>=m;m >>= 1)
+                j -= m;
+            j += m;
+            if(i < j) std::swap(v[i], v[j]);
+        }
     }
     template<bool is_rev>
     static void fft_regular(cvec& vec){
@@ -80,16 +80,16 @@ class Fft{
         int n = vec.size();
         gen_roots(lg(n));
         for(int iter=1, sh=0;iter<n;iter*=2, ++sh){
-			for(int x=0;x<n;x+=2*iter){
-				for(int y=0;y<iter;++y){
-					complex_t ome = roots[(1 << sh) + y];
-					if (is_rev) ome = conj(ome);
-					complex_t v = vec[x+y], w=vec[x+y+iter];
-					vec[x+y] = v+ome*w;
-					vec[x+y+iter] = v-ome*w;
-				}
-			}
-		}
+            for(int x=0;x<n;x+=2*iter){
+                for(int y=0;y<iter;++y){
+                    complex_t ome = roots[(1 << sh) + y];
+                    if (is_rev) ome = conj(ome);
+                    complex_t v = vec[x+y], w=vec[x+y+iter];
+                    vec[x+y] = v+ome*w;
+                    vec[x+y+iter] = v-ome*w;
+                }
+            }
+        }
     }
     template<bool is_rev>
     static void fft_inplace(cvec&v){
@@ -205,7 +205,7 @@ public:
             else vout[i] = l + (m<<SPLIT_BITS) + (r<<(2*SPLIT_BITS));
         }
     }
-	    static void poly_mul_third(ivec& vout, ivec const&v1, ivec const&v2, const size_t mod = 0){
+        static void poly_mul_third(ivec& vout, ivec const&v1, ivec const&v2, const size_t mod = 0){
         if(v1.size() > v2.size()) return poly_mul_third(vout, v2, v1, mod);
         constexpr int BITS = 17, MASK = (1<<BITS) - 1;
         const size_t out_size = v1.size() + v2.size() - 1;
@@ -253,11 +253,11 @@ public:
             complex_t iz = (c3[i] - conj(c3[j])) * NIMAG_factor;
 
             c1[i] = (ry*iz + (ix*iz + ry*rz) * IMAG);
-            c2[i] = (rx*iz + ix*rz + ry*iy + (ix*iz + ry*rz) * IMAG);
-            c3[i] = (ry*iz);
+            c2[i] = (rx*iz + ix*rz + ry*iy + (ix*iy + rx*rz) * IMAG);
+            c3[i] = (rx*iy);
             c1[j] = conj(ry*iz + (ix*iz + ry*rz) * NIMAG);
-            c2[j] = conj(rx*iz + ix*rz + ry*iy + (ix*iz + ry*rz) * NIMAG);
-            c3[j] = conj(ry*iz);
+            c2[j] = conj(rx*iz + ix*rz + ry*iy + (ix*iy + rx*rz) * NIMAG);
+            c3[j] = conj(rx*iy);
         }*/
         for(int i=0;i<=n/2;++i){
             int j = (n-i)&(n-1); //reverse index
@@ -269,11 +269,11 @@ public:
             complex_t iz = (c3[i] - conj(c3[j]));
 
             c1[i] = (ry*iz + (ix*iz - ry*rz)) * NIMAG_factor;
-            c2[i] = (rx*iz + ix*rz + ry*iy + (ix*iz - ry*rz)) * NIMAG_factor;
-            c3[i] = (ry*iz) * NIMAG_factor;
+            c2[i] = (rx*iz + ix*rz + ry*iy + (ix*iy - rx*rz)) * NIMAG_factor;
+            c3[i] = (rx*iy) * NIMAG_factor;
             c1[j] = conj((ry*iz + (ry*rz - ix*iz)) * NIMAG_factor);
-            c2[j] = conj((rx*iz + ix*rz + ry*iy + (ry*rz - ix*iz)) * NIMAG_factor);
-            c3[j] = conj(ry*iz * NIMAG_factor);
+            c2[j] = conj((rx*iz + ix*rz + ry*iy + (rx*rz - ix*iy)) * NIMAG_factor);
+            c3[j] = conj(rx*iy * NIMAG_factor);
         }
         fft_inplace<true>(c1);
         fft_inplace<true>(c2);
@@ -410,7 +410,7 @@ struct NT64 {
         int64_t ret = m+(1-inv_rec(m%a, a)*static_cast<int64_t>(m))/a;
         return ret;
     }
-	// this is soooo great, can even be used for a sieve
+    // this is soooo great, can even be used for a sieve
     static int64_t inv_rec_2(int64_t const&a, int64_t const&m){
         assert(a!=0);
         if(a==1) return 1;

@@ -21,15 +21,10 @@ double dist(Point const&a, Point const&b, Point const&c, Point const&d){
     Point n = (b-a)*(c-a);
     return dot(n, d-a)/sqrt(dot(n, n));
 }
-// use long double or __int128 for coordinates >3e4
-int slope2(Point const&a, Point const&b, Point const&c){
-    return signum(sq(b[0]-a[0])*(sq(c[1]-a[1])+sq(c[2]-a[2])) - sq(c[0]-a[0])*(sq(b[1]-a[1])+sq(b[2]-a[2])));
-}
 int slope(Point const&a, Point const&b, Point const&c){
     __int128 x = sq(b[0]-a[0])*(__int128)(sq(c[1]-a[1])+sq(c[2]-a[2])) - sq(c[0]-a[0]) *(__int128)(sq(b[1]-a[1])+sq(b[2]-a[2]));
     return (x>0)-(x<0);
 }
-
 
 // 3d convex hull
 vector<array<int, 3> > convexhull3d(vector<Point> const&pts){
@@ -63,10 +58,9 @@ vector<array<int, 3> > convexhull3d(vector<Point> const&pts){
         }
         cands.push_back(i);
         Point normal = (pts[j]-pts[i])*(pts[k]-pts[j]);
-        Point normal2 = normal;
-        for(int i:{0, 1, 2}) normal2[i] = signum(normal2[i]);
+        for(auto &e:normal) e = signum(e);
         auto ccw = [&](Point const&a, Point const&b, Point const&c){
-            return signum(dot((b-a)*(c-a), normal2));
+            return signum(dot((b-a)*(c-a), normal));
         };
         auto cmp = [&](int const&aa, int const&bb){
             Point const&a = pts[aa], &b=pts[bb];
@@ -123,7 +117,7 @@ vector<Point> strip_collinear(vector<Point> const&pts){
     return ret;
 }
 // checks if origin is in hull
-signed codejam(){
+signed main(){
     freopen("in.txt", "r", stdin);
     freopen("out.txt", "w", stdout);
     cin.tie(0); ios_base::sync_with_stdio(false);

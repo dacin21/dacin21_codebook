@@ -1,122 +1,165 @@
-template<typename flow_t = int, typename excess_t = long long>
-struct Flow{
+/*
+ *  Highest label push-relabel algorithm in O(V^2 E^0.5)
+ *  Uses various heuristics
+ *  Code by me (dacin21)
+ *
+ *  Special thanks to min_25 and Chilli for showing me a faster version of gap-relabeling.
+ *
+ */
+
+#include <bits/stdc++.h>
+using namespace std;
+
+template<typename cap_t, typename excess_t, bool global_relabeling = true, bool min_cut_only = false, bool shuffle_edges = false>
+class Push_Relabel{
+public:
     struct Edge{
-        int to, next; flow_t f;
-        void set(int _to, flow_t _f, int _n){
-            tie(to, next, f)=make_tuple(_to, _n, _f);
-        }
+        int to, rev;
+        cap_t f;
     };
-    int n, ledge, s, t, *fe, *h, *hp, *cnt, htop;
-    Edge* ed;
-    excess_t *ex, flow;
-    bool *isq;
-    void add_edge(int a, int b, flow_t cap, flow_t rcap = flow_t(0)){
-        assert(a>0&&b>0&&a<n&&b<n);
-        if(a==b) return;
-        ed[ledge].set(a, rcap, fe[b]);
-        fe[b] = ledge++;
-        ed[ledge].set(b, cap, fe[a]);
-        fe[a] = ledge++;
+
+    Push_Relabel(int n_):n(n_), m(0){}
+
+    void add_edge(int u, int v, cap_t c, cap_t c_rev = 0){
+        edge_pool.emplace_back(u, v, c, c_rev);
+        ++m;
     }
-    void push(int u, int v, int p) {
-        flow_t d = ex[u] < ed[p].f ? ex[u] : ed[p].f;
-        ed[p].f -= d, ed[p^1].f += d;
-        ex[u] -= d, ex[v] += d;
+    excess_t max_flow(int s_, int t_){
+        s = s_; t = t_;
+        run_pr();
+        return excess[t]-1;
     }
-    inline void relabel(int u) {
-        if(--cnt[h[u]]){
-            int min_h = 2*n;
-            for (int p = fe[u]; p; p = ed[p].next)
-                if (ed[p].f > 0 && min_h > h[ed[p].to])
-                    min_h = h[ed[p].to];
-            ++cnt[h[u] = min_h + 1];
-        } else {//gap
-            for(int i=1;i<n;++i){
-                if(i!=s && h[i]>h[u]){
-                    --cnt[h[i]];
-                    ++cnt[h[i]=h[s]+1];
-                }
+
+private:
+    void compile_g(){
+        g_pos.resize(n+1);
+        if(shuffle_edges) random_shuffle(edge_pool.begin(), edge_pool.end());
+        for(auto &e:edge_pool){
+            ++g_pos[get<0>(e)];
+            ++g_pos[get<1>(e)];
+        }
+        for(int i=0;i<n;++i){
+            g_pos[i+1]+=g_pos[i];
+        }
+        g.resize(g_pos.back());
+        for(auto &e:edge_pool){
+            int u, v; cap_t c, c_rev;
+            tie(u, v, c, c_rev) = e;
+            const int i = --g_pos[u], j = --g_pos[v];
+            g[i] = Edge{v, j, c};
+            g[j] = Edge{u, i, c_rev};
+        }
+    }
+    void global_relabel(){
+        q.reserve(n);
+        fill(h.begin(), h.end(), n);
+        fill(h_cnt.begin(), h_cnt.end(), 0);
+        h_cnt[n] = 1;
+        q.push_back(t);
+        h[t] = 0;
+        for(auto &e:buck) e.clear();
+        for(auto &e:buck_all) e.clear();
+        for(auto it = q.begin();it<q.end();++it){
+            const int u = *it;
+            if(u != t && excess[u]){
+                hi = h[u];
+                buck[h[u]].push_back(u);
             }
-            ++cnt[h[u]=h[s]+1];
-        }
-    }
-    void hpush(int u) {
-        int i;
-        for (i = ++htop; h[hp[i >> 1]] < h[u]; i >>= 1)
-            hp[i] = hp[i >> 1];
-        hp[i] = u;
-    }
-    void hpop() {
-        int last = hp[htop--], i, ch;
-        for (i = 1; (i << 1) <= htop; i = ch) {
-            ch = i << 1;
-            if (ch != htop && h[hp[ch]] < h[hp[ch + 1]]) ++ch;
-            if (h[last] >= h[hp[ch]]) break;
-            else  hp[i] = hp[ch];
-        }
-        hp[i] = last;
-    }
-    inline void init() {
-        fill(h, h + n, n+2);
-        fill(cnt, cnt + 2*n + 2, 0);
-        h[hp[0]=0] = ~0u >> 1;
-        int f = 1, b = 1;
-        cnt[h[s] = n+1] = cnt[h[t] = 0] = 1;
-        hp[b++] = t;
-        while (f < b) {
-            int u = hp[f++];
-            for (int p = fe[u]; p; p = ed[p].next) {
-                int v = ed[p].to;
-                if (h[v] == n+2 && ed[p^1].f > 0) {
-                    ++cnt[h[v] = h[u] + 1];
-                    hp[b++] = v;
+            if(u != t) buck_all[h[u]].push_back(u);
+            ++h_cnt[h[u]];
+            for(int i = g_pos[u],i_end = g_pos[u+1];i < i_end;++i){
+                Edge const&e = g[i];
+                if(g[e.rev].f && h[e.to] == n){
+                    h[e.to] = h[u]+1;
+                    q.push_back(e.to);
                 }
             }
         }
-        flow = htop = 0;
-        fill(ex, ex + n, 0);
-        fill(isq, isq + n, 0);
-        ex[s] = ~0llU >> 1;
-        for (int p = fe[s]; p != 0; p = ed[p].next) {
-            if (ed[p].f > 0) {
-                int v = ed[p].to;
-                push(s, v, p);
-                if(!isq[v]) {
-                    hpush(v);
-                    isq[v] = true;
-                }
-            }
-        }
+        hi_all = h[q.back()];
+        assert(h[s] == n);
+        q.clear();
     }
-    excess_t max_flow() {
-        init();
-        while (htop) {
-            int u = hp[1];
-            if (u == t) {
-                hpop();
-            } else {
-                for (int p = fe[u]; p; p = ed[p].next) {
-                    int v = ed[p].to;
-                    if (ed[p].f > 0 && h[u] == h[v] + 1) {
-                        push(u, v, p);
-                        if (isq[v] == false) {
-                            if (v != s && v != t)
-                                hpush(v);
-                            isq[v] = true;
-                        }
-                        if (ex[u] == 0) {
-                            hpop();
-                            isq[u] = false;
-                            break;
+    void push(int u, Edge &e, excess_t f){
+        if(!excess[e.to]){
+            buck[h[e.to]].push_back(e.to);
+        }
+        Edge&back = g[e.rev];
+        e.f-=f;
+        back.f+=f;
+        excess[e.to]+=f;
+        excess[u]-=f;
+    }
+    void init_pr(){
+        compile_g();
+        cur.assign(n, 0);
+        copy(g_pos.begin(), prev(g_pos.end()), cur.begin());
+        h.resize(n);
+        excess.assign(n, 0);
+        buck.resize(2*n);
+        buck_all.resize(n+1);
+        h_cnt.assign(2*n, 0);
+        h[s] = n;
+        h_cnt[n] = 1;
+        h_cnt[0] = n-1;
+        excess[t] = 1;
+    }
+    void run_pr(){
+        init_pr();
+        for(int i = g_pos[s],i_end = g_pos[s+1];i < i_end;++i){
+            push(s, g[i], g[i].f);
+        }
+        hi = hi_all = 0;
+        if(global_relabeling) global_relabel();
+        if(!buck[hi].empty())
+        for(;hi>=0;){
+            int u = buck[hi].back(); buck[hi].pop_back();
+            int u_cur = cur[u];
+            //discharge
+            if(!min_cut_only || h[u] < n)
+            while(excess[u] > 0){
+                if(__builtin_expect(u_cur == g_pos[u+1], false)){
+                    int new_h = 1e9;
+                    for(int i = g_pos[u],i_end = g_pos[u+1];i < i_end;++i){
+                        auto const&e = g[i];
+                        if(e.f && new_h > h[e.to]+1){
+                            new_h = h[e.to]+1;
+                            u_cur = i;
                         }
                     }
+                    ++h_cnt[new_h];
+                    h[u] = new_h;
+                    if(__builtin_expect(!--h_cnt[hi] && hi < n, false)){
+                        // gap relabel
+                        for(int j = hi;j <= hi_all;++j){
+                            for(auto &f:buck_all[j]) if(!min_cut_only || h[f] < n){
+                                --h_cnt[h[f]];
+                                h[f] = n+1;
+                            }
+                            buck_all[j].clear();
+                        }
+                    }
+                    hi = h[u];
+                } else {
+                    Edge &e_cur = g[u_cur];
+                    if(e_cur.f && h[u] == h[e_cur.to]+1){
+                        push(u, e_cur, min<excess_t>(excess[u], e_cur.f));
+                    } else ++u_cur;
                 }
-                if (ex[u]) relabel(u);
             }
+            if(h[u] < n) {
+                hi_all = max(hi_all, h[u]);
+                buck_all[h[u]].push_back(u);
+            }
+            cur[u] = u_cur;
+            while(hi>=0 && buck[hi].empty()) --hi;
         }
-        return ex[t];
     }
-    Flow(int N, int M, int S, int T):n(N+1), ledge(2), s(S), t(T), fe(new int[n]), h(new int[n]), hp(new int[n+2]), cnt(new int[2*n+2]), htop(0), ed(new Edge[2*M+2]), ex(new excess_t[n]), isq(new bool[n]){fill(fe, fe+n, 0);}
-    Flow(int N, int M):Flow(N+2, M, N+1, N+2){}
-    ~Flow(){delete[] fe, delete[]h, delete[]hp, delete[]cnt, delete[]ed, delete[]ex; delete[]isq;}
+
+    int n, m, s, t, hi, hi_all;
+    vector<tuple<int, int, cap_t, cap_t> > edge_pool;
+    vector<int> g_pos;
+    vector<Edge> g;
+    vector<int> q, cur, h, h_cnt;
+    vector<excess_t> excess;
+    vector<vector<int> > buck, buck_all;
 };

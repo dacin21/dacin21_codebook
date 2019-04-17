@@ -24,6 +24,7 @@ namespace gmp {
     D(mpz_swap);
     D(mpz_set_str); D(mpz_get_str);
     D(mpz_inp_str); D(mpz_out_str);
+    D(mpz_import); D(mpz_export);
 
     D(mpz_neg); D(mpz_abs);
     D(mpz_add); D(mpz_add_ui);
@@ -53,6 +54,10 @@ namespace gmp {
         void inp_str(FILE* fp=stdin, int base=10) { my_mpz_inp_str(n, fp, base); }
         void set_str(char* str, mp_limb_t base=10) { my_mpz_set_str(n, str, base); }
         void get_str(char* str, mp_limb_t base=10) { my_mpz_get_str(str, base, n); }
+        // usage: A.do_import(n, 1, sizeof(long long), 0, <leading bits to ignore>, a);
+        void do_import(size_t count, int order, size_t size, int endian, size_t nails, const void *op){ my_mpz_import(n, count, order, size, endian, nails, op); }
+        // usage: C.do_export(a, out_len, 1, sizeof(long long), 0, <leading bits to ignore>);
+        void* do_export(void *rop, size_t &countp, int order, size_t size, int endian, size_t nails){ return my_mpz_export(rop, &countp, order, size, endian, nails, n); }
 
         void print(FILE* fp=stdout) { my_mpz_out_str(fp, 10, n); }
         void println(FILE* fp=stdout) { print(fp); fprintf(fp, "\n"); }
@@ -73,8 +78,8 @@ namespace gmp {
         static void mod(mpz& r, mpz& n, mpz& d) { my_mpz_tdiv_r(r.n, n.n, d.n); }
         static void swap(mpz& a, mpz& b) { my_mpz_swap(a.n, b.n); }
         static void gcd(mpz&c, mpz&a, mpz&b) { my_mpz_gcd(c.n, a.n, b.n); }
-        static void binomial_ui(mpz&c, mpz&n, mp_limb_t k){ mpz_bin_ui(c.n, n.n, k); }
-        static void binomial_uiui(mpz&c, mp_limb_t n, mp_limb_t k){ mpz_bin_uiui(c.n, n, k); }
+        static void binomial_ui(mpz&c, mpz&n, mp_limb_t k){ my_mpz_bin_ui(c.n, n.n, k); }
+        static void binomial_uiui(mpz&c, mp_limb_t n, mp_limb_t k){ my_mpz_bin_uiui(c.n, n, k); }
 
         void negate() { my_mpz_neg(n, n); }
         void pow_ui(mp_limb_t e) { my_mpz_pow_ui(n, n, e); }
@@ -95,6 +100,7 @@ namespace gmp {
     };
 
 } // namespace gmp
+
 
 int main() {
     using namespace gmp;

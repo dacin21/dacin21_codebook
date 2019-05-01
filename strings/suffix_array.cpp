@@ -7,7 +7,7 @@ class Suffix_Array{
     void make_lcp(int const*s){
         for(int i=0, k=0;i<n;++i)
             if(inv[i]!=0){
-                for(int j = sa[inv[i]-1];k<n&&s[i+k]==s[j+k];++k);
+                for(int j = sa[inv[i]-1];k<n-max(i, j) && s[i+k]==s[j+k];++k);
                 lcp[inv[i]-1]=k;
                 if(k)--k;
             } else k=0;

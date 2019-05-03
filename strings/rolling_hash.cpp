@@ -6,15 +6,15 @@
 template<size_t len>
 class Rolling_Hash_Base : public array<uint64_t, len>{
 private:
-    static inline uint64_t add(uint64_t a, uint64_t b){
+    static constexpr uint64_t add(uint64_t a, uint64_t b){
         a+=b+1;
         a = (a&mod) + (a>>61);
         return a-1;
     }
-    static inline uint64_t sub(uint64_t a, uint64_t b){
+    static constexpr uint64_t sub(uint64_t a, uint64_t b){
         return add(a, mod-b);
     }
-    static uint64_t modmul(uint64_t a, uint64_t b){
+    static constexpr uint64_t modmul(uint64_t a, uint64_t b){
         uint64_t l1 = (uint32_t)a, h1 = a>>32, l2 = (uint32_t)b, h2 = b>>32;
         uint64_t l = l1*l2, m = l1*h2 + l2*h1, h = h1*h2;
         uint64_t ret = (l&mod) + (l>>61) + (h << 3) + (m >> 29) + (m << 35 >> 3) + 1;
@@ -46,7 +46,7 @@ private:
 public:
     static constexpr uint64_t mod = (1ull<<61) - 1;
 
-    Rolling_Hash_Base() = default;
+    Rolling_Hash_Base() : array<uint64_t, len>{} {};
     Rolling_Hash_Base(Rolling_Hash_Base const&o) = default;
     Rolling_Hash_Base& operator=(Rolling_Hash_Base const&o) = default;
 
@@ -59,7 +59,7 @@ public:
     }
     static vector<Rolling_Hash_Base> hashify(string const&s){
         vector<Rolling_Hash_Base> ret;
-        ret.reserve(s.size());
+        ret.reserve(s.size()+1);
         ret.push_back(Rolling_Hash_Base());
         for(char const&e:s){
             ret.push_back(ret.back() + e);

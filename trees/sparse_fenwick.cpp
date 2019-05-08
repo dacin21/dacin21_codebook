@@ -35,7 +35,7 @@ struct Fenwick_Tree{
         for(auto &e:trees) e.compile();
     }
     T q(array<int, dim> const&pos){
-        T ret; array<int, dim-1> newpos = pop_front(pos);
+        T ret = 0; array<int, dim-1> newpos = pop_front(pos);
         for(unsigned int x = compress(pos[0]);x;x-=(x&-x)){
             ret+=trees[x-1].q(newpos);
         }

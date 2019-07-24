@@ -1,7 +1,7 @@
 // Subset sum with integers weights
 // Implementation uses std::bitset and compresses equal weights
-// For items with total weight S, this runs in O(S^{1.5} log S / 64)
-// (You could get rid of the log S if you iterate the compression.)
+// For items with total weight S, this runs in O(S^{1.5} / 64)
+// (Use Jensen to avoid a factor of log S.)
 struct Subset_Sum{
     struct Item{
         int weight;
@@ -57,7 +57,7 @@ private:
             }
         };
         auto process = [&](int weight, int cnt){
-            // compress
+            // compress, keeping at most 2 copies of each power of 2
             for(int step = 1;cnt;){
                 cnt-=step;
                 process_step(weight, step);

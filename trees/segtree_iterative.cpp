@@ -45,7 +45,7 @@ struct Segment_Tree{
 		copy(base.begin(), base.end(), data.begin()+n);
 		for(int i=n-1;i>=0;--i) data[i] = Segtree_Data::merge_nodes(data[i<<1], data[i<<1|1]);
 	}
-	void update(int pos, Segtree_Data::update_t const&val){
+	void update(int pos, typename Segtree_Data::update_t const&val){
 		for(Segtree_Data::update_node(data[pos+=n], val);pos>>=1;){
 			data[pos] = Segtree_Data::merge_nodes(data[pos<<1], data[pos<<1|1]);
 		}

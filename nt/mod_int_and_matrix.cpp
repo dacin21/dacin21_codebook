@@ -17,7 +17,7 @@ public:
          val.value = mod_full(val.value);
          return i;
     }
-    int_t const& get_value (){
+    int_t const& get_value(){
         return value;
     }
 
@@ -28,6 +28,9 @@ public:
     Mod_Int& operator+=(Mod_Int const&o){
         return *this = *this + o;
     }
+    Mod_Int& operator++(){
+        return operator+=(int_t{1});
+    }
     Mod_Int operator-() const{
         Mod_Int ret(mod_step(mod() - value));
         return ret;
@@ -35,8 +38,11 @@ public:
     Mod_Int operator-(Mod_Int const&o) const {
         return operator+(-o);
     }
-    Mod_Int operator-=(Mod_Int const&o){
+    Mod_Int& operator-=(Mod_Int const&o){
         return operator+=(-o);
+    }
+    Mod_Int& operator--(){
+        return operator-=(int_t{1});
     }
     Mod_Int operator*(Mod_Int const&o) const {
         Mod_Int ret(mod_full(value * static_cast<long_t>(o.value)));

@@ -60,14 +60,18 @@ struct LinkCutTree{
         for(size_t i=0;i<N;++i)
             g.emplace_back(i);
     }
+    // Note: u and v will NOT be at the root after this.
     bool connected(int u, int v){
-        Node*x = access(&g[u])->first();
-        Node*y = access(&g[v])->first();
+        access(&g[u]);
+        Node*x = g[u].first();
+        access(&g[v]);
+        Node*y = g[v].first();
         return x==y;
     }
     void link(int u, int p){
         lct_assert(!connected(u, p));
         make_root(&g[u]);
+        access(&g[p]);
         g[u].pp=&g[p];
     }
     void cut_up(int u){

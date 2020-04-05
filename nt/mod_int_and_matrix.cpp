@@ -144,7 +144,7 @@ struct mutable_mod{
 };
 mutable_mod::int_t mutable_mod::mod = 1000000007;
 
-using num = Mod_Int<fixed_mod_long<1000000007>>;
+using num = Mod_Int<fixed_mod<1000000007>>;
 using mut_num = Mod_Int<mutable_mod>;
 
 

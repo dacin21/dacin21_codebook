@@ -52,21 +52,41 @@ struct Upper_Hull{
         Link *chain, *chain_back;
         Link *tangent;
     };
-    void fix_chain(int u, Link*l, Link*r){
-        for(;l->next || r->next;){
-            if(!r->next || (l->next && ccw(l->next->p - l->p, r->next->p - r->p) <= 0)){
-                if(ccw(l->p, l->next->p, r->p) <= 0){
-                    l = l->next;
+    template<typename S, typename T>
+    pair<Link*, Link*> find_bridge(Link*l, Link*r, S next, T convex){
+        while(next(l) || next(r)){
+            if(!next(r) || (next(l) && convex(Point{0, 0}, next(l)->p - l->p, next(r)->p - r->p))){
+                if(convex(l->p, next(l)->p, r->p)){
+                    l = next(l);
                 } else {
                     break;
                 }
             } else {
-                if(ccw(l->p, r->p, r->next->p) > 0){
-                    r = r->next;
+                if(!convex(l->p, r->p, next(r)->p)){
+                    r = next(r);
                 } else {
                     break;
                 }
             }
+        }
+        return {l, r};
+    }
+    template<bool rev = false>
+    void fix_chain(int u, Link*l, Link*r){
+        if(rev){ // l and r to the right of actual bridge
+            swap(l, r);
+            tie(l, r) = find_bridge(l, r,
+                [](Link*x){ return x->prev; },
+                [](Point const&a, Point const&b, Point const&c){
+                    return ccw(a, b, c) >= 0;
+                });
+            swap(l, r);
+        } else { // l and r to the left of actual bridge
+            tie(l, r) = find_bridge(l, r,
+                [](Link*x){ return x->next; },
+                [](Point const&a, Point const&b, Point const&c){
+                    return ccw(a, b, c) <= 0;
+                });
         }
         tree[u].tangent = l;
         tree[u].chain = tree[2*u].chain;
@@ -151,16 +171,13 @@ struct Upper_Hull{
         }
         if(i < m){
             if(l->id == i){
-                l = l->prev;
+                l = l->next;
             }
             remove(2*u, a, m, i);
             if(!l){
-                l = tree[2*u].chain;
+                l = tree[2*u].chain_back;
             }
-            // more points on right half might get visible
-            while(r->prev && ccw(l->p, r->prev->p, r->p) <= 0){
-                r = r->prev;
-            }
+            fix_chain<true>(u, l, r);
         } else {
             if(r->id == i){
                 r = r->prev;
@@ -169,8 +186,8 @@ struct Upper_Hull{
             if(!r){
                 r = tree[2*u+1].chain;
             }
+            fix_chain<false>(u, l, r);
         }
-        fix_chain(u, l, r);
     }
     void remove(int i){
         // i is the only point

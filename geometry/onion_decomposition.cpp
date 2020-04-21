@@ -74,13 +74,11 @@ struct Upper_Hull{
     template<bool rev = false>
     void fix_chain(int u, Link*l, Link*r){
         if(rev){ // l and r to the right of actual bridge
-            swap(l, r);
-            tie(l, r) = find_bridge(l, r,
+            tie(r, l) = find_bridge(r, l,
                 [](Link*x){ return x->prev; },
                 [](Point const&a, Point const&b, Point const&c){
                     return ccw(a, b, c) >= 0;
                 });
-            swap(l, r);
         } else { // l and r to the left of actual bridge
             tie(l, r) = find_bridge(l, r,
                 [](Link*x){ return x->next; },

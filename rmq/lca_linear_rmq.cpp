@@ -3,67 +3,83 @@
 // Algorithm by Baruch Schieber and Uzi Vishkin
 struct Lowest_Common_Ancestor{
     uint32_t n, root;
-    vector<uint32_t> parent, order, inv_order;
-    vector<uint32_t> ascendant, inlabel, inlabel_link;
-    vector<array<uint32_t, 2> > ch;
+    vector<uint32_t> parent, order;
+    struct AI{
+        uint32_t ascendant, inlabel;
+    };
+    vector<AI> ai;
+    vector<int> v;
+    vector<uint32_t> inlabel_link;
+
     Lowest_Common_Ancestor(){}
-    Lowest_Common_Ancestor(vector<uint32_t> const&_parent, uint32_t _root):n(_parent.size()), root(_root), parent(_parent){build();}
-    Lowest_Common_Ancestor(vector<int>const&_parent, int _root):n(_parent.size()), root(_root), parent(_parent.cbegin(),_parent.cend()){build();}
+    Lowest_Common_Ancestor(vector<int> const&v_):n(v_.size()), parent(n) {
+        v.reserve(n+1);
+        v.insert(v.end(), v_.begin(), v_.end());
+        // add sentinel
+        v.push_back(numeric_limits<int>::min());
+        build();
+    }
     __attribute__((always_inline))
     inline uint32_t low_bit_mask(uint32_t x){
         return x&-x;
     }
     __attribute__((always_inline))
     inline uint32_t high_bit_mask(uint32_t x){
-        return x ? (~0u>>(__builtin_clz(x))>>1) : 0;
-    }
-    __attribute__((always_inline))
-    inline void preorder(){
-        ch.assign(n, array<uint32_t, 2>({~0u, ~0u}));
-
-        for(uint32_t i=0;i<n;++i) if(i!=root){
-            ch[parent[i]][1] = ch[parent[i]][0];
-            ch[parent[i]][0] = i;
-        }
-        order.reserve(n);
-        inv_order.resize(n);
-        vector<uint32_t> s(1, root);
-        s.reserve(n);
-        while(!s.empty()){
-            uint32_t cur = s.back(); s.pop_back();
-            order.push_back(cur);
-            inv_order[cur] = order.size();
-            if(~ch[cur][0]) s.push_back(ch[cur][0]);
-            if(~ch[cur][1]) s.push_back(ch[cur][1]);
-        }
+        return x ? ((~0u>>1)>>__builtin_clz(x)) : 0;
     }
     __attribute__((always_inline))
     inline void label(){
-        ascendant.resize(n);
-        inlabel = inv_order;
         inlabel_link.resize(n);
         // compute inlabel, i.e. the descendant with most trailing zeros
         for(uint32_t i=n-1;i>0;--i){
             uint32_t v = order[i], p = parent[v];
-            if(low_bit_mask(inlabel[v])>low_bit_mask(inlabel[p]))
-                inlabel[p] = inlabel[v];
+            if(low_bit_mask(ai[v].inlabel)>low_bit_mask(ai[p].inlabel))
+                ai[p].inlabel = ai[v].inlabel;
         }
         // compute ascendant and links of inlabel-paths (link[v] = par[head[inlabel[v]]])
-        ascendant[root] = low_bit_mask(inlabel[root]);
-        inlabel_link[inlabel[root]-1] = root; // should be unused
+        ai[root].ascendant = low_bit_mask(ai[root].inlabel);
+        inlabel_link[ai[root].inlabel-1] = root; // should be unused
         for(uint32_t i=1;i<n;++i){
             uint32_t v = order[i], p = parent[v];
-            ascendant[v] = ascendant[p] | low_bit_mask(inlabel[v]);
-            if(inlabel[v] != inlabel[p]) inlabel_link[inlabel[v]-1] = p;
+            ai[v].ascendant = ai[p].ascendant | low_bit_mask(ai[v].inlabel);
+            if(ai[v].inlabel != ai[p].inlabel) inlabel_link[ai[v].inlabel-1] = p;
         }
     }
     void build(){
-        preorder();
+        ai.resize(n);
+        uint32_t j = n;
+        order.resize(n);
+        vector<uint32_t> s(1, n);
+        s.reserve(n+1);
+        for(uint32_t i=n-1;~i;--i){
+            uint32_t last = i;
+            while(v[i]<v[s.back()]){
+                const int u = s.back();
+                order[--j] = u;
+                ai[u].inlabel = j;
+                parent[last] = u;
+                last = u;
+                s.pop_back();
+            }
+            parent[last] = i;
+            s.push_back(i);
+        }
+        for(uint32_t i=s.size()-1; i>1; --i){
+            const int u = s[i];
+            order[--j] = u;
+            ai[u].inlabel = j;
+            parent[u] = s[i-1];
+        }
+        root = s[1];
+        parent[root] = ~0u;
+        order[0] = root;
+        ai[root].inlabel =  0;
+        
         label();
     }
-    uint32_t get_lca(uint32_t a, uint32_t b){
-        uint32_t inlabel_a = inlabel[a], inlabel_b = inlabel[b];
-        uint32_t ascendant_a = ascendant[a], ascendant_b = ascendant[b];
+    uint32_t query(uint32_t a, uint32_t b){
+        uint32_t inlabel_a = ai[a].inlabel, ascendant_a = ai[a].ascendant;
+        uint32_t inlabel_b = ai[b].inlabel, ascendant_b = ai[b].ascendant;
         uint32_t i_mask = high_bit_mask(inlabel_a^inlabel_b);
         uint32_t j_mask = low_bit_mask(((ascendant_a&ascendant_b)&~i_mask));
         uint32_t inlabel_lca = (inlabel_a==inlabel_b) ? inlabel_a : ((inlabel_a&~((j_mask<<1)-1))|j_mask);
@@ -77,27 +93,7 @@ struct Lowest_Common_Ancestor{
             uint32_t inlabel_w = (inlabel_b&~k_mask)|(k_mask+1);
             b = inlabel_link[inlabel_w-1];
         }
-        return inv_order[a]<inv_order[b] ? a:b;
-    }
-	// solves RMQ by LCA
-    template<typename T>
-    static Lowest_Common_Ancestor build_rmq(vector<T> const&values){
-        uint32_t n = values.size();
-        vector<uint32_t> p(n), s;
-        for(uint32_t i=0;i<values.size();++i){
-            uint32_t last = i;
-            while(!s.empty() && values[i]<values[s.back()]){
-                p[last] = s.back();
-                last = s.back();
-                s.pop_back();
-            }
-            p[last] = i;
-            s.push_back(i);
-        }
-        for(uint32_t i=1;i<s.size();++i){
-            p[s[i]] = s[i-1];
-        }
-        p[s[0]] = ~0u;
-        return Lowest_Common_Ancestor(p, s[0]);
+        //return v[a]<v[b] ? a:b; // index
+        return min(v[a], v[b]);
     }
 };

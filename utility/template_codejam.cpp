@@ -145,8 +145,14 @@ void debug_print_(T const& d)const{\
     d.pprint_all(#__VA_ARGS__, __VA_ARGS__);\
 }
 
+#ifndef LOCAL_RUN
+debug_::Debug<false> debug;
+#else
+
  debug_::Debug<true> debug;
 // debug_::Debug<false> debug; // disable debug printing
+
+#endif
 #define named(x) string(#x) << " : " <<  x
 
 

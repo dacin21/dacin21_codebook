@@ -21,7 +21,7 @@ struct Point{
         return a;
     }
     friend ll dot(Point const&a, Point const&b){
-        return a.x*b.y + a.y*b.y;
+        return a.x*b.x + a.y*b.y;
     }
     friend ll cross(Point const&a, Point const&b){
         return a.x*b.y - a.y*b.x;

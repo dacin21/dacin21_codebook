@@ -115,7 +115,7 @@ class Fft{
         for(size_t i=min_siz;i<vin2.size();++i){
             vout[i] = complex_t(0.0, static_cast<double>(vin2[i]));
         }
-        std::fill(vout.begin()+min_siz, vout.end(), complex_t(0.0, 0.0));
+        std::fill(vout.begin()+std::max(vin1.size(), vin2.size()), vout.end(), complex_t(0.0, 0.0));
     }
     static void uncomplexify(ivec &vout, cvec const& vin, size_t const&result_size){
         vout.resize(result_size);

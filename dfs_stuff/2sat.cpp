@@ -1,98 +1,119 @@
-// 2-sat in linear time via backtracking.
+/*
+ * 2-sat in linear time without SCC
+ * variables from 0 to n-1, use ~x for negation.
+ */
 class Two_Sat {
-    int N; // number of variables
-    vector<int> val; // assignment of x is at val[2x] and -x at val[2x+1]
-    vector<char> valid; // changes made at time i are kept iff valid[i]
-    vector<vector<int> > G; // graph of implications G[x][i] = y means (x -> y)
-
-    Two_Sat(int N_) : N(N_) { // create a formula over N variables (numbered 1 to N)
-        G.resize(2*N);
-    }
-
+    int n;
+    vector<char> val; // assignment: 1 or 0 where x is at val[2x] and ~x at val[2x+1]
+    vector<int> q; // queue for bfs
+    vector<vector<int> > g; // graph of implications G[x][i] = y means (x -> y)
     int add_variable() {
-        G.emplace_back();
-        G.emplace_back();
-        return N++;
+        g.emplace_back();
+        g.emplace_back();
+        return n++;
     }
 
-private:
-    // converts a signed variable index to its position in val[] and G[]
+    // x / ~x (0 <= x < n) to indices in 0, ..., 2n-1
     int to_ind(int x) {
-        return 2*(abs(x)-1) + (x<0);
+        return x<0 ? 2*(~x)+1 : 2*x;
     }
-
-    // Add a directed edge to the graph.
-    // You most likely do not want to call this yourself!
+    // do not use! use add_implication instead!
     void add_edge(int a, int b) {
-        G[to_ind(a)].push_back(to_ind(b));
+        g[to_ind(a)].push_back(to_ind(b));
     }
 
-    int time() {
-        return valid.size()-1;
-    }
-
-    bool dfs(int x) {
-        if(valid[abs(val[x])]) return val[x]>0;
-        val[x] = time();
-        val[x^1] = -time();
-        for(int e:G[x])
-            if(!dfs(e))
-                return false;
+    bool bfs(int x) {
+        q[0] = x;
+        val[x] = 1;
+        val[x^1] = 0;
+        auto it = q.begin();
+        auto it_end = next(it);
+        auto fail = [&](){
+            for(it = q.begin(); it != it_end; ++it){
+                val[*it] = val[*it^1] = -1;
+            }
+            return false;
+        };
+        while(it != it_end){
+            const int u = *(it++);
+            for(int const e : g[u]){
+                switch(val[e]){
+                    case 0:
+                        return fail();
+                    case -1:
+                        val[e] = 1;
+                        val[e^1] = 0;
+                        *(it_end++) = e;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
         return true;
     }
 
 public:
+    Two_Sat(int n_) : n(n_), g(2*n){}
     // Add the or-clause: (a or b)
     void add_or(int a, int b) {
-        add_edge(-a,b);
-        add_edge(-b,a);
+        add_edge(~a,b);
+        add_edge(~b,a);
     }
-
+    // Add condition: (not a) or (not b)
+    void add_not_both(int a, int b) {
+        add_or(~a, ~b);
+    }
     // Add the implication: a -> b
     void add_implication(int a, int b) {
-        add_or(-a, b);
+        add_or(~a, b);
     }
-
     // Add condition: x is true
     void add_true(int x) {
         add_or(x,x);
+    }
+    // Add condition: x is false
+    void add_false(int x) {
+        add_true(~x);
     }
 
     // At most one with linear number of clauses
     template<typename T>
     void add_at_most_one(T vars) {
         if(vars.begin() == vars.end()) return;
-        int last = *vars.begin();
-        int cur = 0;
-        for(int const&e:vars){
-            if(e == last) continue;
-            if(cur == 0) cur = e;
-            else {
-                add_or(-cur, -e);
+        auto it = vars.begin();
+        int last = -1;
+        int cur = *it;
+        while(++it != vars.end()){
+            if(last != -1){
                 int new_cur = add_variable();
-                cur = add_implication(cur, new_cur);
-                add_implication(e, new_cur);
+                add_implication(cur, new_cur);
+                add_implication(last, new_cur);
                 cur = new_cur;
             }
-        }
-        if(cur != 0){
-            add_or(-cur, -last);
+            last = cur;
+            cur = *it;
+            add_not_both(last, cur);
         }
     }
 
     bool solve() {
-        val.assign(2*n, 0);
-        valid.assign(1, 0);
-        for(int i=0; i<val.size(); i+=2) {
-            if(!valid[abs(val[i])]) {
-                valid.push_back(1);
-                if(!dfs(i)) {
-                    valid.back()=0;
-                    valid.push_back(1);
-                    if(!dfs(i+1)) return false;
+        val.assign(2*n, -1);
+        q.assign(2*n+1, -1);
+        for(int i=0; i<(int)val.size(); i+=2) {
+            if(val[i] == -1){
+                if(!bfs(i)){
+                    if(!bfs(i+1)){
+                        return false;
+                    }
                 }
             }
         }
         return true;
+    }
+    bool get_val(int x){
+        assert(0 <= x && x < n);
+        assert(val[2*x] != -1);
+        return val[2*x];
     }
 };

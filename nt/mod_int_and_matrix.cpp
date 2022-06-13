@@ -76,8 +76,8 @@ public:
     Mod_Int& operator--(){
         return operator-=(int_t{1});
     }
-    Mod_Int operator*(Mod_Int const&o) const {
-        Mod_Int ret(mod_full(value * static_cast<long_t>(o.value)));
+    friend Mod_Int operator*(Mod_Int const&a, Mod_Int const&b) {
+        Mod_Int ret(mod_full(a.value * static_cast<long_t>(b.value)));
         return ret;
     }
     Mod_Int& operator*=(Mod_Int const&o){
@@ -87,7 +87,7 @@ public:
         return inv_impl(value);
     }
     Mod_Int operator/(Mod_Int const&o) const {
-        return operator*(o.inv());
+        return *this * o.inv();
     }
     Mod_Int& operator/=(Mod_Int const&o) {
         return *this = *this / o;
